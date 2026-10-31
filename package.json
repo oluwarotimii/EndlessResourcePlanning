@@ -1,0 +1,29 @@
+{
+  "name": "erp-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "tokens": "pnpm --filter @erp/tokens build",
+    "dev": "pnpm tokens && pnpm -r --parallel --filter @erp/mock-server --filter @erp/web dev",
+    "build": "pnpm tokens && pnpm --filter @erp/web build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm tokens && vitest run",
+    "check:tokens": "node scripts/check-tokens.mjs",
+    "check:docs": "node scripts/check-docs.mjs",
+    "docs:status": "node scripts/check-docs.mjs --write",
+    "check": "pnpm check:tokens && pnpm check:docs && pnpm typecheck && pnpm test && pnpm build",
+    "e2e": "node e2e/till-offline.cjs",
+    "fixtures": "python3 tools/gen-fixtures.py"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.1.0",
+    "@types/node": "^22.10.0",
+    "fake-indexeddb": "^6.2.7",
+    "jsdom": "^26.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

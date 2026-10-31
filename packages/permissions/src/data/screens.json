@@ -1,0 +1,1541 @@
+[
+ {
+  "id": "P01",
+  "area": "Platform",
+  "title": "Login and device registration",
+  "roles": [
+   "Accountant",
+   "Admin / IT",
+   "Auditor",
+   "Branch manager",
+   "Cash controller",
+   "Cashier",
+   "Credit controller",
+   "Customer success manager",
+   "Customer support",
+   "Delivery coordinator",
+   "Digital media",
+   "HR officer",
+   "MD / Executive",
+   "Marketing manager",
+   "Procurement officer",
+   "Rider / courier",
+   "Sales rep",
+   "Stock controller",
+   "Technician",
+   "Warehouse officer"
+  ],
+  "erpnext": "User, session",
+  "verdict": "Build custom",
+  "pattern": "Form",
+  "device": "All",
+  "offline": "Partial",
+  "scope": "MVP",
+  "sprint": "S1"
+ },
+ {
+  "id": "P02",
+  "area": "Platform",
+  "title": "Role home (task queue)",
+  "roles": [
+   "Accountant",
+   "Admin / IT",
+   "Auditor",
+   "Branch manager",
+   "Cash controller",
+   "Cashier",
+   "Credit controller",
+   "Customer success manager",
+   "Customer support",
+   "Delivery coordinator",
+   "Digital media",
+   "HR officer",
+   "MD / Executive",
+   "Marketing manager",
+   "Procurement officer",
+   "Rider / courier",
+   "Sales rep",
+   "Stock controller",
+   "Technician",
+   "Warehouse officer"
+  ],
+  "erpnext": "Workspace (too cluttered)",
+  "verdict": "Build custom",
+  "pattern": "Dashboard",
+  "device": "All",
+  "offline": "Cached",
+  "scope": "MVP",
+  "sprint": "S1"
+ },
+ {
+  "id": "P03",
+  "area": "Platform",
+  "title": "Offline and sync tray",
+  "roles": [
+   "Accountant",
+   "Admin / IT",
+   "Auditor",
+   "Branch manager",
+   "Cash controller",
+   "Cashier",
+   "Credit controller",
+   "Customer success manager",
+   "Customer support",
+   "Delivery coordinator",
+   "Digital media",
+   "HR officer",
+   "MD / Executive",
+   "Marketing manager",
+   "Procurement officer",
+   "Rider / courier",
+   "Sales rep",
+   "Stock controller",
+   "Technician",
+   "Warehouse officer"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "List",
+  "device": "All",
+  "offline": "Yes",
+  "scope": "MVP",
+  "sprint": "S2"
+ },
+ {
+  "id": "P04",
+  "area": "Platform",
+  "title": "Notifications",
+  "roles": [
+   "Accountant",
+   "Admin / IT",
+   "Auditor",
+   "Branch manager",
+   "Cash controller",
+   "Cashier",
+   "Credit controller",
+   "Customer success manager",
+   "Customer support",
+   "Delivery coordinator",
+   "Digital media",
+   "HR officer",
+   "MD / Executive",
+   "Marketing manager",
+   "Procurement officer",
+   "Rider / courier",
+   "Sales rep",
+   "Stock controller",
+   "Technician",
+   "Warehouse officer"
+  ],
+  "erpnext": "Notification",
+  "verdict": "Configure ERPNext",
+  "pattern": "List",
+  "device": "All",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S6"
+ },
+ {
+  "id": "P05",
+  "area": "Platform",
+  "title": "Config console (screens, roles, branding)",
+  "roles": [
+   "Admin / IT"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Form",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S10"
+ },
+ {
+  "id": "S01",
+  "area": "Stores (POS)",
+  "title": "Till (scan and pay)",
+  "roles": [
+   "Cashier"
+  ],
+  "erpnext": "POS Invoice, POS Profile",
+  "verdict": "Build custom",
+  "pattern": "Scan flow",
+  "device": "Tablet",
+  "offline": "Yes",
+  "scope": "MVP",
+  "sprint": "S2"
+ },
+ {
+  "id": "S02",
+  "area": "Stores (POS)",
+  "title": "Parked sales",
+  "roles": [
+   "Cashier"
+  ],
+  "erpnext": "Draft invoice",
+  "verdict": "Build custom",
+  "pattern": "List",
+  "device": "Tablet",
+  "offline": "Yes",
+  "scope": "MVP",
+  "sprint": "S2"
+ },
+ {
+  "id": "S03",
+  "area": "Stores (POS)",
+  "title": "Shift open and close",
+  "roles": [
+   "Cashier"
+  ],
+  "erpnext": "POS Opening and Closing Entry",
+  "verdict": "Configure ERPNext",
+  "pattern": "Wizard",
+  "device": "Tablet",
+  "offline": "Yes",
+  "scope": "MVP",
+  "sprint": "S2"
+ },
+ {
+  "id": "S04",
+  "area": "Stores (POS)",
+  "title": "Customer lookup",
+  "roles": [
+   "Cashier",
+   "Sales rep"
+  ],
+  "erpnext": "Customer",
+  "verdict": "Configure ERPNext",
+  "pattern": "List",
+  "device": "Tablet, phone",
+  "offline": "Cached",
+  "scope": "MVP",
+  "sprint": "S2"
+ },
+ {
+  "id": "S05",
+  "area": "Stores (POS)",
+  "title": "Needs-manager request (discount, void)",
+  "roles": [
+   "Cashier"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Dialog",
+  "device": "Tablet",
+  "offline": "No",
+  "scope": "MVP",
+  "sprint": "S3"
+ },
+ {
+  "id": "S06",
+  "area": "Stores (POS)",
+  "title": "Stock check and order",
+  "roles": [
+   "Sales rep"
+  ],
+  "erpnext": "Item, Bin, Sales Order",
+  "verdict": "Build custom",
+  "pattern": "Scan flow",
+  "device": "Phone",
+  "offline": "Cached",
+  "scope": "Later",
+  "sprint": "S8"
+ },
+ {
+  "id": "W01",
+  "area": "Web and app",
+  "title": "Online orders queue (staff)",
+  "roles": [],
+  "erpnext": "Sales Order, Pick List",
+  "verdict": "Configure ERPNext",
+  "pattern": "List",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S9"
+ },
+ {
+  "id": "W02",
+  "area": "Web and app",
+  "title": "Customer app: catalogue, cart, pay, tracking",
+  "roles": [],
+  "erpnext": "Website Item, Shopping Cart",
+  "verdict": "Build custom",
+  "pattern": "Storefront",
+  "device": "Phone",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "W03",
+  "area": "Web and app",
+  "title": "Customer scan-and-pay cart with QR",
+  "roles": [],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Scan flow",
+  "device": "Phone",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "C01",
+  "area": "CRM",
+  "title": "Customer accounts",
+  "roles": [],
+  "erpnext": "Customer, Contact",
+  "verdict": "Configure ERPNext",
+  "pattern": "List and detail",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "C02",
+  "area": "CRM",
+  "title": "Lead pipeline",
+  "roles": [
+   "Sales rep"
+  ],
+  "erpnext": "Lead, Opportunity kanban",
+  "verdict": "Use ERPNext",
+  "pattern": "Kanban",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "C03",
+  "area": "Customer success",
+  "title": "Customer care inbox",
+  "roles": [],
+  "erpnext": "Issue, SLA",
+  "verdict": "Configure ERPNext",
+  "pattern": "List and detail",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "C04",
+  "area": "Customer success",
+  "title": "Feedback follow-up",
+  "roles": [],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Form",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "M01",
+  "area": "Marketing",
+  "title": "Campaigns and promotions",
+  "roles": [],
+  "erpnext": "Campaign, Coupon Code, Pricing Rule",
+  "verdict": "Configure ERPNext",
+  "pattern": "List and form",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "M02",
+  "area": "Marketing",
+  "title": "Customer segments",
+  "roles": [],
+  "erpnext": "Weak",
+  "verdict": "Build custom",
+  "pattern": "List",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "M03",
+  "area": "Marketing",
+  "title": "Referrals and loyalty",
+  "roles": [],
+  "erpnext": "Loyalty Program",
+  "verdict": "Configure ERPNext",
+  "pattern": "List",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "D01",
+  "area": "Digital media",
+  "title": "Content and prices (price-change request)",
+  "roles": [
+   "Digital media"
+  ],
+  "erpnext": "Item, Price List",
+  "verdict": "Configure ERPNext",
+  "pattern": "Form",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "R01",
+  "area": "Procurement",
+  "title": "Purchase orders",
+  "roles": [
+   "Procurement officer"
+  ],
+  "erpnext": "Material Request, PO",
+  "verdict": "Configure ERPNext",
+  "pattern": "List and form",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "R02",
+  "area": "Procurement",
+  "title": "Supplier onboarding",
+  "roles": [
+   "Procurement officer"
+  ],
+  "erpnext": "Supplier",
+  "verdict": "Configure ERPNext",
+  "pattern": "Form",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "H01",
+  "area": "Warehouse",
+  "title": "Goods receipt (scan)",
+  "roles": [
+   "Warehouse officer"
+  ],
+  "erpnext": "Purchase Receipt",
+  "verdict": "Build custom",
+  "pattern": "Scan flow",
+  "device": "Tablet",
+  "offline": "Yes",
+  "scope": "MVP",
+  "sprint": "S4"
+ },
+ {
+  "id": "H02",
+  "area": "Warehouse",
+  "title": "Branch stock request",
+  "roles": [
+   "Branch manager"
+  ],
+  "erpnext": "Material Request",
+  "verdict": "Configure ERPNext",
+  "pattern": "Form",
+  "device": "Tablet, phone",
+  "offline": "No",
+  "scope": "MVP",
+  "sprint": "S3"
+ },
+ {
+  "id": "H03",
+  "area": "Warehouse",
+  "title": "Transfer dispatch (pick and pack)",
+  "roles": [
+   "Warehouse officer"
+  ],
+  "erpnext": "Stock Entry, Pick List",
+  "verdict": "Configure ERPNext",
+  "pattern": "Scan flow",
+  "device": "Tablet",
+  "offline": "Yes",
+  "scope": "MVP",
+  "sprint": "S4"
+ },
+ {
+  "id": "H04",
+  "area": "Warehouse",
+  "title": "Transfer receipt and in-transit list",
+  "roles": [
+   "Branch manager",
+   "Warehouse officer"
+  ],
+  "erpnext": "Stock Entry (no signature)",
+  "verdict": "Build custom",
+  "pattern": "Scan flow",
+  "device": "Tablet",
+  "offline": "Yes",
+  "scope": "MVP",
+  "sprint": "S4"
+ },
+ {
+  "id": "H05",
+  "area": "Warehouse",
+  "title": "Stock lookup",
+  "roles": [
+   "Sales rep",
+   "Stock controller",
+   "Warehouse officer"
+  ],
+  "erpnext": "Stock Balance",
+  "verdict": "Configure ERPNext",
+  "pattern": "List",
+  "device": "Tablet, phone",
+  "offline": "Cached",
+  "scope": "MVP",
+  "sprint": "S4"
+ },
+ {
+  "id": "H06",
+  "area": "Warehouse",
+  "title": "Quarantine and damaged bin",
+  "roles": [
+   "Warehouse officer"
+  ],
+  "erpnext": "Warehouse",
+  "verdict": "Configure ERPNext",
+  "pattern": "List",
+  "device": "Tablet",
+  "offline": "Yes",
+  "scope": "Later",
+  "sprint": "S7"
+ },
+ {
+  "id": "K01",
+  "area": "Stock control",
+  "title": "Blind cycle count",
+  "roles": [
+   "Stock controller"
+  ],
+  "erpnext": "Stock Reconciliation (not blind)",
+  "verdict": "Build custom",
+  "pattern": "Scan flow",
+  "device": "Tablet",
+  "offline": "Yes",
+  "scope": "MVP",
+  "sprint": "S4"
+ },
+ {
+  "id": "K02",
+  "area": "Stock control",
+  "title": "Variance list and write-off request",
+  "roles": [
+   "Stock controller"
+  ],
+  "erpnext": "None dedicated",
+  "verdict": "Build custom",
+  "pattern": "Approval",
+  "device": "Tablet",
+  "offline": "Partial",
+  "scope": "MVP",
+  "sprint": "S4"
+ },
+ {
+  "id": "K03",
+  "area": "Stock control",
+  "title": "Serial and IMEI check",
+  "roles": [
+   "Cashier",
+   "Stock controller"
+  ],
+  "erpnext": "Serial No",
+  "verdict": "Configure ERPNext",
+  "pattern": "Scan flow",
+  "device": "Tablet",
+  "offline": "Yes",
+  "scope": "Later",
+  "sprint": "S7"
+ },
+ {
+  "id": "T01",
+  "area": "Returns",
+  "title": "Customer return (receipt lookup)",
+  "roles": [
+   "Cashier"
+  ],
+  "erpnext": "Sales Return",
+  "verdict": "Configure ERPNext",
+  "pattern": "Wizard",
+  "device": "Tablet",
+  "offline": "Partial",
+  "scope": "MVP",
+  "sprint": "S3"
+ },
+ {
+  "id": "T02",
+  "area": "Returns",
+  "title": "Supplier return",
+  "roles": [
+   "Warehouse officer"
+  ],
+  "erpnext": "Purchase Return",
+  "verdict": "Configure ERPNext",
+  "pattern": "Form",
+  "device": "Tablet",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "T03",
+  "area": "Returns",
+  "title": "Returns inspection and restock",
+  "roles": [
+   "Warehouse officer"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Wizard",
+  "device": "Tablet",
+  "offline": "Partial",
+  "scope": "Later",
+  "sprint": "S7"
+ },
+ {
+  "id": "L01",
+  "area": "Delivery",
+  "title": "Dispatch board",
+  "roles": [
+   "Delivery coordinator"
+  ],
+  "erpnext": "Delivery Note, Delivery Trip (basic)",
+  "verdict": "Build custom",
+  "pattern": "Dashboard",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "MVP",
+  "sprint": "S4"
+ },
+ {
+  "id": "L02",
+  "area": "Delivery",
+  "title": "Rider trips",
+  "roles": [
+   "Rider / courier"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "List",
+  "device": "Phone",
+  "offline": "Yes",
+  "scope": "MVP",
+  "sprint": "S4"
+ },
+ {
+  "id": "L03",
+  "area": "Delivery",
+  "title": "Proof of delivery and failed reason",
+  "roles": [
+   "Rider / courier"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Wizard",
+  "device": "Phone",
+  "offline": "Yes",
+  "scope": "MVP",
+  "sprint": "S4"
+ },
+ {
+  "id": "L04",
+  "area": "Delivery",
+  "title": "Rider cash remittance",
+  "roles": [
+   "Cash controller",
+   "Rider / courier"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Form",
+  "device": "Phone",
+  "offline": "Partial",
+  "scope": "MVP",
+  "sprint": "S4"
+ },
+ {
+  "id": "L05",
+  "area": "Delivery",
+  "title": "Cash-on-delivery outstanding",
+  "roles": [
+   "Delivery coordinator"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "List",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "MVP",
+  "sprint": "S4"
+ },
+ {
+  "id": "X01",
+  "area": "Repairs",
+  "title": "Repair intake with photos and IMEI",
+  "roles": [
+   "Technician"
+  ],
+  "erpnext": "Warranty Claim (weak)",
+  "verdict": "Build custom",
+  "pattern": "Wizard",
+  "device": "Tablet",
+  "offline": "Partial",
+  "scope": "Later",
+  "sprint": "S8"
+ },
+ {
+  "id": "X02",
+  "area": "Repairs",
+  "title": "My repair jobs",
+  "roles": [
+   "Technician"
+  ],
+  "erpnext": "Custom doctype",
+  "verdict": "Build custom",
+  "pattern": "List and detail",
+  "device": "Tablet",
+  "offline": "Partial",
+  "scope": "Later",
+  "sprint": "S8"
+ },
+ {
+  "id": "X03",
+  "area": "Repairs",
+  "title": "Parts request",
+  "roles": [
+   "Technician"
+  ],
+  "erpnext": "Stock Entry",
+  "verdict": "Configure ERPNext",
+  "pattern": "Form",
+  "device": "Tablet",
+  "offline": "Partial",
+  "scope": "Later",
+  "sprint": "S8"
+ },
+ {
+  "id": "X04",
+  "area": "Repairs",
+  "title": "Quote approval and ready for pickup",
+  "roles": [
+   "Technician"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Detail",
+  "device": "Tablet, desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S8"
+ },
+ {
+  "id": "Q01",
+  "area": "Cash-up",
+  "title": "Cash-up count",
+  "roles": [
+   "Cashier"
+  ],
+  "erpnext": "POS Closing Entry (partial)",
+  "verdict": "Build custom",
+  "pattern": "Wizard",
+  "device": "Tablet",
+  "offline": "Yes",
+  "scope": "MVP",
+  "sprint": "S3"
+ },
+ {
+  "id": "Q02",
+  "area": "Cash-up",
+  "title": "Cash-up sign-off",
+  "roles": [
+   "Branch manager"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Approval",
+  "device": "Tablet, phone",
+  "offline": "Partial",
+  "scope": "MVP",
+  "sprint": "S3"
+ },
+ {
+  "id": "Q03",
+  "area": "Cash-up",
+  "title": "Cross-branch cash-up review and deposit match",
+  "roles": [
+   "Cash controller"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "List",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S7"
+ },
+ {
+  "id": "A01",
+  "area": "Approvals",
+  "title": "Approvals inbox",
+  "roles": [
+   "Branch manager",
+   "MD / Executive"
+  ],
+  "erpnext": "Workflow Action, ToDo",
+  "verdict": "Build custom",
+  "pattern": "Approval inbox",
+  "device": "Phone, tablet",
+  "offline": "Queue",
+  "scope": "MVP",
+  "sprint": "S3"
+ },
+ {
+  "id": "A02",
+  "area": "Approvals",
+  "title": "Branch manager home",
+  "roles": [
+   "Branch manager"
+  ],
+  "erpnext": "Reports",
+  "verdict": "Build custom",
+  "pattern": "Dashboard",
+  "device": "Tablet, phone",
+  "offline": "Cached",
+  "scope": "MVP",
+  "sprint": "S3"
+ },
+ {
+  "id": "A03",
+  "area": "HR and staff",
+  "title": "Branch attendance view",
+  "roles": [
+   "Branch manager"
+  ],
+  "erpnext": "Attendance",
+  "verdict": "Configure ERPNext",
+  "pattern": "List",
+  "device": "Tablet",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S6"
+ },
+ {
+  "id": "F01",
+  "area": "Payments",
+  "title": "Paystack reconciliation",
+  "roles": [
+   "Accountant"
+  ],
+  "erpnext": "Payment Entry, Bank Transaction",
+  "verdict": "Build custom",
+  "pattern": "List",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S9"
+ },
+ {
+  "id": "F02",
+  "area": "Payments",
+  "title": "Payee whitelist",
+  "roles": [
+   "Accountant"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "List",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S9"
+ },
+ {
+  "id": "F03",
+  "area": "Payroll",
+  "title": "Payout batch (GAPS file, limits, MD code)",
+  "roles": [
+   "Accountant",
+   "MD / Executive"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Wizard",
+  "device": "Desktop, phone",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S9"
+ },
+ {
+  "id": "F04",
+  "area": "Tax and VAT",
+  "title": "VAT and tax returns",
+  "roles": [
+   "Accountant"
+  ],
+  "erpnext": "Tax Template",
+  "verdict": "Build custom",
+  "pattern": "Report",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S9"
+ },
+ {
+  "id": "F05",
+  "area": "Accounting",
+  "title": "Bank reconciliation",
+  "roles": [
+   "Accountant"
+  ],
+  "erpnext": "Bank Reconciliation",
+  "verdict": "Use ERPNext",
+  "pattern": "Desk",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "Desk"
+ },
+ {
+  "id": "F06",
+  "area": "Accounting",
+  "title": "Ledgers and invoices",
+  "roles": [
+   "Accountant"
+  ],
+  "erpnext": "GL Entry, Invoices",
+  "verdict": "Use ERPNext",
+  "pattern": "Desk",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "Desk"
+ },
+ {
+  "id": "F07",
+  "area": "Accounting",
+  "title": "Journal approval",
+  "roles": [
+   "Accountant",
+   "MD / Executive"
+  ],
+  "erpnext": "Journal Entry",
+  "verdict": "Configure ERPNext",
+  "pattern": "Approval",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "F08",
+  "area": "Accounting",
+  "title": "Branch P and L",
+  "roles": [
+   "Accountant",
+   "MD / Executive"
+  ],
+  "erpnext": "P and L by Cost Center",
+  "verdict": "Configure ERPNext",
+  "pattern": "Dashboard",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "F09",
+  "area": "Payroll",
+  "title": "Payroll runs",
+  "roles": [
+   "Accountant",
+   "HR officer"
+  ],
+  "erpnext": "Payroll Entry, Salary Slip",
+  "verdict": "Configure ERPNext",
+  "pattern": "Wizard",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "H10",
+  "area": "HR and staff",
+  "title": "Staff records",
+  "roles": [
+   "HR officer"
+  ],
+  "erpnext": "Employee",
+  "verdict": "Use ERPNext",
+  "pattern": "Desk",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "Desk"
+ },
+ {
+  "id": "H11",
+  "area": "HR and staff",
+  "title": "Leave and attendance (HR)",
+  "roles": [
+   "HR officer"
+  ],
+  "erpnext": "Leave, Attendance",
+  "verdict": "Use ERPNext",
+  "pattern": "Desk",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "Desk"
+ },
+ {
+  "id": "H12",
+  "area": "HR and staff",
+  "title": "Staff self-service (leave, payslip)",
+  "roles": [
+   "Accountant",
+   "Admin / IT",
+   "Auditor",
+   "Branch manager",
+   "Cash controller",
+   "Cashier",
+   "Credit controller",
+   "Customer success manager",
+   "Customer support",
+   "Delivery coordinator",
+   "Digital media",
+   "HR officer",
+   "MD / Executive",
+   "Marketing manager",
+   "Procurement officer",
+   "Rider / courier",
+   "Sales rep",
+   "Stock controller",
+   "Technician",
+   "Warehouse officer"
+  ],
+  "erpnext": "Employee Self Service",
+  "verdict": "Configure ERPNext",
+  "pattern": "List",
+  "device": "Phone",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "U01",
+  "area": "Audit",
+  "title": "Audit trail",
+  "roles": [
+   "Auditor"
+  ],
+  "erpnext": "Version, Activity Log",
+  "verdict": "Configure ERPNext",
+  "pattern": "List",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "U02",
+  "area": "Audit",
+  "title": "Audit findings and independent counts",
+  "roles": [
+   "Auditor"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Form",
+  "device": "Desktop, tablet",
+  "offline": "Partial",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "G01",
+  "area": "Reporting",
+  "title": "Loss report: cash-up variance by branch and cashier",
+  "roles": [
+   "Branch manager",
+   "MD / Executive"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Dashboard",
+  "device": "Tablet, phone",
+  "offline": "Cached",
+  "scope": "MVP",
+  "sprint": "S3"
+ },
+ {
+  "id": "G02",
+  "area": "Reporting",
+  "title": "Loss report: transfers in transit over 24 hours",
+  "roles": [
+   "Branch manager",
+   "MD / Executive"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "List",
+  "device": "Tablet, phone",
+  "offline": "Cached",
+  "scope": "MVP",
+  "sprint": "S4"
+ },
+ {
+  "id": "G03",
+  "area": "Reporting",
+  "title": "Loss report: unbanked cash and deposit match",
+  "roles": [
+   "Cash controller",
+   "MD / Executive"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "List",
+  "device": "Desktop, phone",
+  "offline": "Cached",
+  "scope": "Later",
+  "sprint": "S7"
+ },
+ {
+  "id": "G04",
+  "area": "Reporting",
+  "title": "Loss report: refunds, voids, discounts by cashier",
+  "roles": [
+   "Auditor",
+   "MD / Executive"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Dashboard",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S7"
+ },
+ {
+  "id": "G05",
+  "area": "Reporting",
+  "title": "Loss report: count variance and write-offs",
+  "roles": [
+   "Auditor",
+   "MD / Executive"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Dashboard",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S7"
+ },
+ {
+  "id": "G06",
+  "area": "Reporting",
+  "title": "Loss report: negative stock and manual adjustments",
+  "roles": [
+   "Auditor",
+   "MD / Executive"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "List",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S7"
+ },
+ {
+  "id": "G07",
+  "area": "Reporting",
+  "title": "Loss report: failed deliveries and COD uncollected",
+  "roles": [
+   "Delivery coordinator",
+   "MD / Executive"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Dashboard",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S7"
+ },
+ {
+  "id": "G08",
+  "area": "Reporting",
+  "title": "Loss report: Paystack versus orders",
+  "roles": [
+   "Accountant",
+   "MD / Executive"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "List",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S9"
+ },
+ {
+  "id": "G09",
+  "area": "Reporting",
+  "title": "Loss report: price and margin changes",
+  "roles": [
+   "Auditor",
+   "MD / Executive"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "List",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S10"
+ },
+ {
+  "id": "G10",
+  "area": "Reporting",
+  "title": "MD morning dashboard",
+  "roles": [
+   "MD / Executive"
+  ],
+  "erpnext": "Dashboard, Number Card",
+  "verdict": "Build custom",
+  "pattern": "Dashboard",
+  "device": "Phone",
+  "offline": "Cached",
+  "scope": "Later",
+  "sprint": "S10"
+ },
+ {
+  "id": "N01",
+  "area": "Admin and IT",
+  "title": "Users and roles",
+  "roles": [
+   "Admin / IT"
+  ],
+  "erpnext": "User, Role Permission",
+  "verdict": "Use ERPNext",
+  "pattern": "Desk",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "Desk"
+ },
+ {
+  "id": "N02",
+  "area": "Admin and IT",
+  "title": "Break-glass admin access (MD-held)",
+  "roles": [
+   "MD / Executive"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Form",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S10"
+ },
+ {
+  "id": "P06",
+  "area": "Platform",
+  "title": "Print templates (A5 invoice and receipt, statement, delivery note, transfer note)",
+  "roles": [
+   "Accountant",
+   "Admin / IT",
+   "Auditor",
+   "Branch manager",
+   "Cash controller",
+   "Cashier",
+   "Credit controller",
+   "Customer success manager",
+   "Customer support",
+   "Delivery coordinator",
+   "Digital media",
+   "HR officer",
+   "MD / Executive",
+   "Marketing manager",
+   "Procurement officer",
+   "Rider / courier",
+   "Sales rep",
+   "Stock controller",
+   "Technician",
+   "Warehouse officer"
+  ],
+  "erpnext": "Print Format",
+  "verdict": "Build custom",
+  "pattern": "Template",
+  "device": "Desktop, tablet",
+  "offline": "Partial",
+  "scope": "MVP",
+  "sprint": "S2"
+ },
+ {
+  "id": "CR01",
+  "area": "Credit sales",
+  "title": "Credit sale at till (balance and limit check)",
+  "roles": [
+   "Cashier"
+  ],
+  "erpnext": "Sales Invoice, Customer credit limit",
+  "verdict": "Build custom",
+  "pattern": "Scan flow",
+  "device": "Tablet",
+  "offline": "Partial",
+  "scope": "MVP",
+  "sprint": "S3"
+ },
+ {
+  "id": "CR02",
+  "area": "Credit sales",
+  "title": "Record customer payment against invoices",
+  "roles": [
+   "Accountant",
+   "Cashier"
+  ],
+  "erpnext": "Payment Entry",
+  "verdict": "Configure ERPNext",
+  "pattern": "Form",
+  "device": "Tablet, desktop",
+  "offline": "Partial",
+  "scope": "Later",
+  "sprint": "S6"
+ },
+ {
+  "id": "CR03",
+  "area": "Credit sales",
+  "title": "Customer statement (A5 or A4 print)",
+  "roles": [
+   "Credit controller"
+  ],
+  "erpnext": "Statement of Account report",
+  "verdict": "Configure ERPNext",
+  "pattern": "Report",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S6"
+ },
+ {
+  "id": "CR04",
+  "area": "Credit sales",
+  "title": "Receivables ageing and collections list",
+  "roles": [
+   "Credit controller"
+  ],
+  "erpnext": "Accounts Receivable report",
+  "verdict": "Configure ERPNext",
+  "pattern": "List",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S7"
+ },
+ {
+  "id": "CR05",
+  "area": "Credit sales",
+  "title": "Credit limit request and approval",
+  "roles": [
+   "Credit controller",
+   "MD / Executive"
+  ],
+  "erpnext": "Customer credit limit (no workflow)",
+  "verdict": "Configure ERPNext",
+  "pattern": "Approval",
+  "device": "Desktop, phone",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S7"
+ },
+ {
+  "id": "EX01",
+  "area": "Expenses",
+  "title": "Expense request with receipt photo",
+  "roles": [
+   "Accountant",
+   "Admin / IT",
+   "Auditor",
+   "Branch manager",
+   "Cash controller",
+   "Cashier",
+   "Credit controller",
+   "Customer success manager",
+   "Customer support",
+   "Delivery coordinator",
+   "Digital media",
+   "HR officer",
+   "MD / Executive",
+   "Marketing manager",
+   "Procurement officer",
+   "Rider / courier",
+   "Sales rep",
+   "Stock controller",
+   "Technician",
+   "Warehouse officer"
+  ],
+  "erpnext": "Expense Claim",
+  "verdict": "Configure ERPNext",
+  "pattern": "Form",
+  "device": "Phone",
+  "offline": "Partial",
+  "scope": "Later",
+  "sprint": "S6"
+ },
+ {
+  "id": "EX02",
+  "area": "Expenses",
+  "title": "Expense approval (in approvals inbox)",
+  "roles": [
+   "Branch manager",
+   "MD / Executive"
+  ],
+  "erpnext": "Expense Claim workflow",
+  "verdict": "Configure ERPNext",
+  "pattern": "Approval",
+  "device": "Phone",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "S6"
+ },
+ {
+  "id": "EX03",
+  "area": "Expenses",
+  "title": "Petty cash float and reconciliation",
+  "roles": [
+   "Branch manager",
+   "Cash controller"
+  ],
+  "erpnext": "Journal Entry (no float concept)",
+  "verdict": "Build custom",
+  "pattern": "Wizard",
+  "device": "Tablet",
+  "offline": "Partial",
+  "scope": "Later",
+  "sprint": "S7"
+ },
+ {
+  "id": "EX04",
+  "area": "Expenses",
+  "title": "Company expenses: vendor bills, rent, utilities",
+  "roles": [
+   "Accountant"
+  ],
+  "erpnext": "Purchase Invoice, Journal Entry",
+  "verdict": "Use ERPNext",
+  "pattern": "Desk",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "Desk"
+ },
+ {
+  "id": "AS01",
+  "area": "Assets",
+  "title": "Asset register and lookup",
+  "roles": [
+   "Accountant",
+   "Branch manager"
+  ],
+  "erpnext": "Asset",
+  "verdict": "Configure ERPNext",
+  "pattern": "List and detail",
+  "device": "Desktop, tablet",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "AS02",
+  "area": "Assets",
+  "title": "Asset assignment and transfer between branches",
+  "roles": [
+   "Accountant",
+   "Branch manager"
+  ],
+  "erpnext": "Asset Movement",
+  "verdict": "Configure ERPNext",
+  "pattern": "Form",
+  "device": "Tablet",
+  "offline": "Partial",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "AS03",
+  "area": "Assets",
+  "title": "Asset maintenance request and schedule",
+  "roles": [
+   "Branch manager",
+   "Technician"
+  ],
+  "erpnext": "Asset Maintenance",
+  "verdict": "Configure ERPNext",
+  "pattern": "Form",
+  "device": "Tablet",
+  "offline": "Partial",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "AS04",
+  "area": "Assets",
+  "title": "Asset purchase, capitalisation and depreciation",
+  "roles": [
+   "Accountant"
+  ],
+  "erpnext": "Asset, Depreciation Schedule",
+  "verdict": "Use ERPNext",
+  "pattern": "Desk",
+  "device": "Desktop",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "Desk"
+ },
+ {
+  "id": "AS05",
+  "area": "Assets",
+  "title": "Asset disposal and write-off approval",
+  "roles": [
+   "Accountant",
+   "MD / Executive"
+  ],
+  "erpnext": "Asset (scrap or sell)",
+  "verdict": "Configure ERPNext",
+  "pattern": "Approval",
+  "device": "Desktop, phone",
+  "offline": "No",
+  "scope": "Later",
+  "sprint": "After S10"
+ },
+ {
+  "id": "AS06",
+  "area": "Assets",
+  "title": "Asset count and verification by scanning tag",
+  "roles": [
+   "Auditor",
+   "Stock controller"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Scan flow",
+  "device": "Tablet",
+  "offline": "Yes",
+  "scope": "Later",
+  "sprint": "After S10"
+ }
+]

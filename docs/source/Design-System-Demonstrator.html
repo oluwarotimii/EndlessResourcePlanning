@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apple-Style Dynamic ERP Design System</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            primary: 'var(--color-primary)',
+            'primary-hover': 'var(--color-primary-hover)',
+            'primary-subtle': 'var(--color-primary-subtle)',
+            'primary-text': 'var(--color-primary-text)',
+            secondary: 'var(--color-secondary)',
+            'secondary-hover': 'var(--color-secondary-hover)',
+            'secondary-subtle': 'var(--color-secondary-subtle)',
+            'secondary-text': 'var(--color-secondary-text)',
+            surface: 'var(--color-surface)',
+            'surface-raised': 'var(--color-surface-raised)',
+            'surface-overlay': 'var(--color-surface-overlay)',
+            border: 'var(--color-border)',
+            'border-strong': 'var(--color-border-strong)',
+            text: 'var(--color-text)',
+            'text-muted': 'var(--color-text-muted)',
+          },
+          transitionTimingFunction: {
+            'apple-ease': 'cubic-bezier(0.16, 1, 0.3, 1)',
+            'apple-snap': 'cubic-bezier(0.25, 1, 0.5, 1)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      /* Theme Defaults - Apple Indigo & Cyan */
+      --color-primary: #0066CC;
+      --color-primary-hover: #0052A3;
+      --color-primary-subtle: rgba(0, 102, 204, 0.08);
+      --color-primary-text: #FFFFFF;
+      
+      --color-secondary: #5AC8FA;
+      --color-secondary-hover: #32ADE6;
+      --color-secondary-subtle: rgba(90, 200, 250, 0.12);
+      --color-secondary-text: #000000;
+
+      /* Light Theme Surface Base */
+      --color-surface: rgba(255, 255, 255, 0.85);
+      --color-surface-raised: #FFFFFF;
+      --color-surface-overlay: rgba(245, 245, 247, 0.95);
+      --color-border: rgba(0, 0, 0, 0.08);
+      --color-border-strong: rgba(0, 0, 0, 0.16);
+      --color-text: #1D1D1F;
+      --color-text-muted: #86868B;
+      --bg-gradient-start: #F5F5F7;
+      --bg-gradient-end: #E8E8ED;
+    }
+
+    .dark {
+      /* Dark Theme Surface Base */
+      --color-surface: rgba(28, 28, 30, 0.82);
+      --color-surface-raised: #1C1C1E;
+      --color-surface-overlay: rgba(44, 44, 46, 0.95);
+      --color-border: rgba(255, 255, 255, 0.1);
+      --color-border-strong: rgba(255, 255, 255, 0.2);
+      --color-text: #F5F5F7;
+      --color-text-muted: #86868B;
+      --bg-gradient-start: #000000;
+      --bg-gradient-end: #121214;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+      color: var(--color-text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* Apple Frosted Glass Utilities */
+    .glass-panel {
+      background-color: var(--color-surface);
+      backdrop-filter: blur(20px) saturate(180%);
+      -webkit-backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid var(--color-border);
+    }
+
+    .glass-card {
+      background-color: var(--color-surface-raised);
+      border: 1px solid var(--color-border);
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+      transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .glass-card:hover {
+      box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+
+    /* Micro-Interactions */
+    .btn-spring {
+      transition: transform 150ms cubic-bezier(0.25, 1, 0.5, 1), background-color 200ms ease, box-shadow 200ms ease;
+    }
+    .btn-spring:active {
+      transform: scale(0.96) !important;
+    }
+
+    /* Tabular Numbers for ERP Financial Data */
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(140, 140, 145, 0.3);
+      border-radius: 99px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(140, 140, 145, 0.5);
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col transition-colors duration-300">
+
+  <!-- Top Navigation Bar (Frosted Glass) -->
+  <header class="sticky top-0 z-40 glass-panel border-b border-border transition-colors duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center space-x-3">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-md font-bold text-lg" style="background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));">
+          <i data-lucide="layers" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="font-bold text-base tracking-tight">AURA<span class="font-normal opacity-70">ERP</span></h1>
+            <span class="text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full border border-border" style="background-color: var(--color-primary-subtle); color: var(--color-primary);">Design System 2.0</span>
+          </div>
+          <p class="text-xs text-text-muted hidden sm:block">Dynamic Theme Engine & Architecture Spec</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="flex items-center bg-black/5 dark:bg-white/5 p-1 rounded-xl border border-border text-xs font-medium">
+        <button id="nav-demo-btn" onclick="switchTab('demo')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 btn-spring shadow-sm font-semibold" style="background-color: var(--color-surface-raised); color: var(--color-text);">
+          <i data-lucide="layout-dashboard" class="w-3.5 h-3.5 inline-block mr-1"></i> Live ERP Demo
+        </button>
+        <button id="nav-docs-btn" onclick="switchTab('docs')" class="px-3.5 py-1.5 rounded-lg transition-all duration-200 btn-spring text-text-muted hover:text-text">
+          <i data-lucide="book-open" class="w-3.5 h-3.5 inline-block mr-1"></i> System Spec & Tokens
+        </button>
+      </div>
+
+      <!-- Quick Actions / Mode Toggle -->
+      <div class="flex items-center space-x-2">
+        <button onclick="toggleDarkMode()" class="p-2.5 rounded-xl border border-border hover:bg-black/5 dark:hover:bg-white/5 btn-spring transition-colors text-text" title="Toggle Light/Dark Mode">
+          <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+          <i data-lucide="moon" class="w-4 h-4 block dark:hidden"></i>
+        </button>
+        <button onclick="openDrawer()" class="p-2.5 rounded-xl border border-border bg-black/5 dark:bg-white/5 btn-spring transition-colors text-text hidden sm:flex items-center space-x-1.5 text-xs font-medium">
+          <i data-lucide="sliders" class="w-4 h-4"></i>
+          <span>Theme Config</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Layout -->
+  <div class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col md:flex-row gap-6">
+
+    <!-- Floating Theme Engine Panel (Sidebar for Desktop, Toggleable Drawer on Mobile) -->
+    <aside id="theme-panel" class="w-full md:w-80 flex-shrink-0 transition-all duration-300">
+      <div class="glass-card rounded-2xl p-5 sticky top-22">
+        
+        <div class="flex items-center justify-between pb-4 mb-4 border-b border-border">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="palette" class="w-4 h-4" style="color: var(--color-primary)"></i>
+            <h2 class="font-semibold text-sm tracking-tight">Theme Color Engine</h2>
+          </div>
+          <span class="text-[10px] font-mono px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/5 border border-border">Realtime Variables</span>
+        </div>
+
+        <!-- Dynamic Color Pickers -->
+        <div class="space-y-4">
+          <div>
+            <label class="text-xs font-medium text-text-muted block mb-1.5 flex justify-between">
+              <span>Primary Accent</span>
+              <span id="primary-hex-display" class="font-mono text-[11px] text-text">#0066CC</span>
+            </label>
+            <div class="flex items-center space-x-2">
+              <input type="color" id="primary-color-input" value="#0066CC" oninput="updatePrimaryColor(this.value)" class="w-9 h-9 rounded-xl border border-border cursor-pointer bg-transparent p-0.5">
+              <input type="text" id="primary-hex-input" value="#0066CC" onchange="updatePrimaryColor(this.value)" class="flex-1 bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3 py-1.5 text-xs font-mono focus:outline-none focus:ring-2" style="--tw-ring-color: var(--color-primary);">
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-medium text-text-muted block mb-1.5 flex justify-between">
+              <span>Secondary Accent</span>
+              <span id="secondary-hex-display" class="font-mono text-[11px] text-text">#5AC8FA</span>
+            </label>
+            <div class="flex items-center space-x-2">
+              <input type="color" id="secondary-color-input" value="#5AC8FA" oninput="updateSecondaryColor(this.value)" class="w-9 h-9 rounded-xl border border-border cursor-pointer bg-transparent p-0.5">
+              <input type="text" id="secondary-hex-input" value="#5AC8FA" onchange="updateSecondaryColor(this.value)" class="flex-1 bg-black/5 dark:bg-white/5 border border-border rounded-xl px-3 py-1.5 text-xs font-mono focus:outline-none focus:ring-2" style="--tw-ring-color: var(--color-secondary);">
+            </div>
+          </div>
+
+          <!-- Color Presets -->
+          <div class="pt-2">
+            <label class="text-xs font-medium text-text-muted block mb-2">Curated Apple Presets</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="applyPreset('#0066CC', '#5AC8FA')" class="p-2 rounded-xl border border-border bg-black/5 dark:bg-white/5 text-xs text-left hover:border-text-muted transition-all btn-spring flex items-center space-x-2">
+                <div class="flex -space-x-1">
+                  <div class="w-3.5 h-3.5 rounded-full bg-[#0066CC]"></div>
+                  <div class="w-3.5 h-3.5 rounded-full bg-[#5AC8FA]"></div>
+                </div>
+                <span class="truncate">Cupertino Blue</span>
+              </button>
+
+              <button onclick="applyPreset('#34C759', '#30B0C7')" class="p-2 rounded-xl border border-border bg-black/5 dark:bg-white/5 text-xs text-left hover:border-text-muted transition-all btn-spring flex items-center space-x-2">
+                <div class="flex -space-x-1">
+                  <div class="w-3.5 h-3.5 rounded-full bg-[#34C759]"></div>
+                  <div class="w-3.5 h-3.5 rounded-full bg-[#30B0C7]"></div>
+                </div>
+                <span class="truncate">Emerald & Mint</span>
+              </button>
+
+              <button onclick="applyPreset('#AF52DE', '#FF2D55')" class="p-2 rounded-xl border border-border bg-black/5 dark:bg-white/5 text-xs text-left hover:border-text-muted transition-all btn-spring flex items-center space-x-2">
+                <div class="flex -space-x-1">
+                  <div class="w-3.5 h-3.5 rounded-full bg-[#AF52DE]"></div>
+                  <div class="w-3.5 h-3.5 rounded-full bg-[#FF2D55]"></div>
+                </div>
+                <span class="truncate">Violet Pulse</span>
+              </button>
+
+              <button onclick="applyPreset('#FF9500', '#FF3B30')" class="p-2 rounded-xl border border-border bg-black/5 dark:bg-white/5 text-xs text-left hover:border-text-muted transition-all btn-spring flex items-center space-x-2">
+                <div class="flex -space-x-1">
+                  <div class="w-3.5 h-3.5 rounded-full bg-[#FF9500]"></div>
+                  <div class="w-3.5 h-3.5 rounded-full bg-[#FF3B30]"></div>
+                </div>
+                <span class="truncate">Sunset Amber</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Color Contrast & Variable Telemetry -->
+          <div class="pt-3 border-t border-border">
+            <div class="p-3 rounded-xl bg-black/5 dark:bg-white/5 border border-border space-y-2">
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-text-muted">Primary Text Contrast</span>
+                <span id="contrast-badge-primary" class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">4.5:1 (AA)</span>
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-text-muted">Calculated Hover Tint</span>
+                <div id="hover-tint-preview" class="w-4 h-4 rounded border border-border" style="background-color: var(--color-primary-hover);"></div>
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-text-muted">Subtle Surface Tint</span>
+                <div id="subtle-tint-preview" class="w-4 h-4 rounded border border-border" style="background-color: var(--color-primary-subtle);"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Viewport Container -->
+    <main class="flex-1 min-w-0">
+      
+      <!-- VIEW 1: LIVE ERP DEMO -->
+      <div id="view-demo" class="space-y-6">
+        
+        <!-- Header Banner with Dynamic Gradient -->
+        <div class="glass-card rounded-2xl p-6 sm:p-8 relative overflow-hidden">
+          <div class="absolute -right-10 -bottom-10 w-64 h-64 rounded-full filter blur-3xl opacity-20 pointer-events-none" style="background: var(--color-primary);"></div>
+          <div class="absolute right-20 -top-10 w-48 h-48 rounded-full filter blur-3xl opacity-20 pointer-events-none" style="background: var(--color-secondary);"></div>
+
+          <div class="relative z-10 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            <div>
+              <div class="flex items-center space-x-2 text-xs font-semibold uppercase tracking-wider mb-1" style="color: var(--color-primary);">
+                <span>Enterprise Operating Center</span>
+                <span>•</span>
+                <span>Realtime ERP Data</span>
+              </div>
+              <h2 class="text-2xl sm:text-3xl font-bold tracking-tight">Financial & Operations Control</h2>
+              <p class="text-sm text-text-muted mt-1 max-w-xl">Demonstrating responsive components with dynamic multi-accent tokens, smooth micro-interactions, and high-density data formatting.</p>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+              <button onclick="triggerNotification()" class="px-4 py-2.5 rounded-xl font-medium text-xs btn-spring shadow-sm flex items-center space-x-2" style="background-color: var(--color-primary); color: var(--color-primary-text);">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Create Order</span>
+              </button>
+              <button onclick="openDrawer()" class="px-4 py-2.5 rounded-xl border border-border font-medium text-xs btn-spring bg-black/5 dark:bg-white/5 hover:bg-black/10 flex items-center space-x-2">
+                <i data-lucide="edit-3" class="w-4 h-4"></i>
+                <span>Inspect Record</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ERP Key Metric Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          
+          <!-- Card 1 -->
+          <div class="glass-card rounded-2xl p-5 relative overflow-hidden group">
+            <div class="flex justify-between items-start mb-3">
+              <span class="text-xs font-medium text-text-muted">Gross Revenue</span>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full border border-border flex items-center space-x-1" style="background-color: var(--color-primary-subtle); color: var(--color-primary);">
+                <i data-lucide="trending-up" class="w-3 h-3 mr-0.5"></i> +14.2%
+              </span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-bold tabular-nums mb-1">$1,284,920.00</div>
+            <div class="text-[11px] text-text-muted flex items-center">
+              <span>Target: $1.2M</span>
+              <span class="mx-1.5">•</span>
+              <span class="text-emerald-500 font-medium">On Track</span>
+            </div>
+            <div class="w-full bg-black/5 dark:bg-white/5 h-1.5 rounded-full mt-4 overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500" style="width: 82%; background-color: var(--color-primary);"></div>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+            <div class="flex justify-between items-start mb-3">
+              <span class="text-xs font-medium text-text-muted">Active Supply Orders</span>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full border border-border flex items-center space-x-1" style="background-color: var(--color-secondary-subtle); color: var(--color-secondary-text);">
+                <i data-lucide="package" class="w-3 h-3 mr-0.5"></i> 34 Pending
+              </span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-bold tabular-nums mb-1">1,492</div>
+            <div class="text-[11px] text-text-muted flex items-center">
+              <span>Fulfillment rate: 99.1%</span>
+            </div>
+            <div class="w-full bg-black/5 dark:bg-white/5 h-1.5 rounded-full mt-4 overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500" style="width: 65%; background-color: var(--color-secondary);"></div>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+            <div class="flex justify-between items-start mb-3">
+              <span class="text-xs font-medium text-text-muted">Global Inventory Health</span>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Optimal</span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-bold tabular-nums mb-1">98.4%</div>
+            <div class="text-[11px] text-text-muted">12 regional warehouses synced</div>
+            <div class="w-full bg-black/5 dark:bg-white/5 h-1.5 rounded-full mt-4 overflow-hidden">
+              <div class="h-full bg-emerald-500 rounded-full" style="width: 98%;"></div>
+            </div>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="glass-card rounded-2xl p-5 relative overflow-hidden">
+            <div class="flex justify-between items-start mb-3">
+              <span class="text-xs font-medium text-text-muted">System Throughput</span>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">14ms latency</span>
+            </div>
+            <div class="text-2xl sm:text-3xl font-bold tabular-nums mb-1">42.8k/s</div>
+            <div class="text-[11px] text-text-muted">API requests zero error</div>
+            <div class="w-full bg-black/5 dark:bg-white/5 h-1.5 rounded-full mt-4 overflow-hidden">
+              <div class="h-full bg-blue-500 rounded-full" style="width: 92%;"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Density Interactive ERP Table & Controls -->
+        <div class="glass-card rounded-2xl overflow-hidden">
+          
+          <!-- Table Toolbar -->
+          <div class="p-4 sm:p-5 border-b border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+            <div>
+              <h3 class="font-bold text-base tracking-tight">Enterprise Ledger & Transactions</h3>
+              <p class="text-xs text-text-muted">Dense, high-precision row rendering with active primary hover states.</p>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex items-center space-x-2 w-full sm:w-auto">
+              <div class="relative flex-1 sm:w-64">
+                <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"></i>
+                <input type="text" placeholder="Filter ledger records..." class="w-full pl-8 pr-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/5 border border-border text-xs focus:outline-none focus:ring-2" style="--tw-ring-color: var(--color-primary);">
+              </div>
+              <button class="p-2 rounded-xl border border-border hover:bg-black/5 dark:hover:bg-white/5 btn-spring text-xs font-medium flex items-center space-x-1">
+                <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+                <span class="hidden sm:inline">Filter</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Table Container -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-black/5 dark:bg-white/5 border-b border-border text-text-muted uppercase text-[10px] tracking-wider font-semibold">
+                <tr>
+                  <th class="py-3 px-4">Transaction ID</th>
+                  <th class="py-3 px-4">Entity / Vendor</th>
+                  <th class="py-3 px-4">Category</th>
+                  <th class="py-3 px-4">Status</th>
+                  <th class="py-3 px-4 text-right">Amount (USD)</th>
+                  <th class="py-3 px-4 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-border">
+                
+                <tr class="transition-colors duration-150 hover:bg-[var(--color-primary-subtle)] group">
+                  <td class="py-3.5 px-4 font-mono text-text-muted font-medium">TX-90421</td>
+                  <td class="py-3.5 px-4 font-semibold text-text flex items-center space-x-2">
+                    <div class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[10px]" style="background-color: var(--color-primary-subtle); color: var(--color-primary);">
+                      AC
+                    </div>
+                    <span>Acme Components Inc.</span>
+                  </td>
+                  <td class="py-3.5 px-4 text-text-muted">Supply Chain / Hardware</td>
+                  <td class="py-3.5 px-4">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Cleared</span>
+                  </td>
+                  <td class="py-3.5 px-4 text-right font-bold tabular-nums text-text">$142,500.00</td>
+                  <td class="py-3.5 px-4 text-center">
+                    <button onclick="openDrawer('TX-90421', 'Acme Components Inc.', '$142,500.00')" class="px-2.5 py-1 rounded-lg border border-border bg-black/5 dark:bg-white/5 hover:bg-black/10 btn-spring text-[11px] font-medium">
+                      Inspect
+                    </button>
+                  </td>
+                </tr>
+
+                <tr class="transition-colors duration-150 hover:bg-[var(--color-primary-subtle)] group">
+                  <td class="py-3.5 px-4 font-mono text-text-muted font-medium">TX-90422</td>
+                  <td class="py-3.5 px-4 font-semibold text-text flex items-center space-x-2">
+                    <div class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[10px]" style="background-color: var(--color-secondary-subtle); color: var(--color-secondary-text);">
+                      NV
+                    </div>
+                    <span>Nexus Tech Systems</span>
+                  </td>
+                  <td class="py-3.5 px-4 text-text-muted">Cloud & Infrastructure</td>
+                  <td class="py-3.5 px-4">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">Pending Review</span>
+                  </td>
+                  <td class="py-3.5 px-4 text-right font-bold tabular-nums text-text">$89,210.50</td>
+                  <td class="py-3.5 px-4 text-center">
+                    <button onclick="openDrawer('TX-90422', 'Nexus Tech Systems', '$89,210.50')" class="px-2.5 py-1 rounded-lg border border-border bg-black/5 dark:bg-white/5 hover:bg-black/10 btn-spring text-[11px] font-medium">
+                      Inspect
+                    </button>
+                  </td>
+                </tr>
+
+                <tr class="transition-colors duration-150 hover:bg-[var(--color-primary-subtle)] group">
+                  <td class="py-3.5 px-4 font-mono text-text-muted font-medium">TX-90423</td>
+                  <td class="py-3.5 px-4 font-semibold text-text flex items-center space-x-2">
+                    <div class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[10px] bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                      GL
+                    </div>
+                    <span>Global Logistics Corp</span>
+                  </td>
+                  <td class="py-3.5 px-4 text-text-muted">Freight & Distribution</td>
+                  <td class="py-3.5 px-4">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Cleared</span>
+                  </td>
+                  <td class="py-3.5 px-4 text-right font-bold tabular-nums text-text">$24,800.00</td>
+                  <td class="py-3.5 px-4 text-center">
+                    <button onclick="openDrawer('TX-90423', 'Global Logistics Corp', '$24,800.00')" class="px-2.5 py-1 rounded-lg border border-border bg-black/5 dark:bg-white/5 hover:bg-black/10 btn-spring text-[11px] font-medium">
+                      Inspect
+                    </button>
+                  </td>
+                </tr>
+
+                <tr class="transition-colors duration-150 hover:bg-[var(--color-primary-subtle)] group">
+                  <td class="py-3.5 px-4 font-mono text-text-muted font-medium">TX-90424</td>
+                  <td class="py-3.5 px-4 font-semibold text-text flex items-center space-x-2">
+                    <div class="w-7 h-7 rounded-lg flex items-center justify-center font-bold text-[10px]" style="background-color: var(--color-primary-subtle); color: var(--color-primary);">
+                      VR
+                    </div>
+                    <span>Vortex Robotics Lab</span>
+                  </td>
+                  <td class="py-3.5 px-4 text-text-muted">R&D Equipment</td>
+                  <td class="py-3.5 px-4">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Cleared</span>
+                  </td>
+                  <td class="py-3.5 px-4 text-right font-bold tabular-nums text-text">$310,000.00</td>
+                  <td class="py-3.5 px-4 text-center">
+                    <button onclick="openDrawer('TX-90424', 'Vortex Robotics Lab', '$310,000.00')" class="px-2.5 py-1 rounded-lg border border-border bg-black/5 dark:bg-white/5 hover:bg-black/10 btn-spring text-[11px] font-medium">
+                      Inspect
+                    </button>
+                  </td>
+                </tr>
+
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Table Footer / Pagination -->
+          <div class="p-3 bg-black/5 dark:bg-white/5 border-t border-border flex justify-between items-center text-xs text-text-muted">
+            <span>Showing 4 of 1,248 Records</span>
+            <div class="flex items-center space-x-2">
+              <button class="px-3 py-1 rounded-lg border border-border bg-black/5 dark:bg-white/5 hover:bg-black/10 disabled:opacity-50 text-[11px]" disabled>Previous</button>
+              <button class="px-3 py-1 rounded-lg border border-border bg-black/5 dark:bg-white/5 hover:bg-black/10 text-[11px]">Next</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Design Tokens Component Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- Interactive Buttons & Control Tokens -->
+          <div class="glass-card rounded-2xl p-5 space-y-4">
+            <h3 class="font-bold text-sm tracking-tight border-b border-border pb-3">Buttons & Interactive Token States</h3>
+            
+            <div class="space-y-3">
+              <label class="text-xs text-text-muted font-medium block">Primary Accent Buttons</label>
+              <div class="flex flex-wrap gap-2">
+                <button class="px-4 py-2 rounded-xl text-xs font-semibold btn-spring shadow-md" style="background-color: var(--color-primary); color: var(--color-primary-text);">
+                  Primary Filled
+                </button>
+                <button class="px-4 py-2 rounded-xl text-xs font-semibold btn-spring border border-border" style="background-color: var(--color-primary-subtle); color: var(--color-primary);">
+                  Primary Subtle
+                </button>
+                <button class="px-3 py-2 rounded-xl text-xs font-semibold btn-spring" style="color: var(--color-primary);">
+                  Ghost Link
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-3 pt-2">
+              <label class="text-xs text-text-muted font-medium block">Secondary Accent Buttons</label>
+              <div class="flex flex-wrap gap-2">
+                <button class="px-4 py-2 rounded-xl text-xs font-semibold btn-spring shadow-md" style="background-color: var(--color-secondary); color: var(--color-secondary-text);">
+                  Secondary Filled
+                </button>
+                <button class="px-4 py-2 rounded-xl text-xs font-semibold btn-spring border border-border" style="background-color: var(--color-secondary-subtle); color: var(--color-secondary-text);">
+                  Secondary Tint
+                </button>
+              </div>
+            </div>
+
+            <!-- Form Control Micro-components -->
+            <div class="pt-3 border-t border-border space-y-3">
+              <label class="text-xs text-text-muted font-medium block">Inputs with Dynamic Focus Ring</label>
+              <input type="text" placeholder="Focused states adapt to --color-primary..." class="w-full px-3.5 py-2 rounded-xl bg-black/5 dark:bg-white/5 border border-border text-xs focus:outline-none focus:ring-2 transition-all" style="--tw-ring-color: var(--color-primary);">
+            </div>
+          </div>
+
+          <!-- Dynamic Badge & Spatial Elevation Token Cards -->
+          <div class="glass-card rounded-2xl p-5 space-y-4">
+            <h3 class="font-bold text-sm tracking-tight border-b border-border pb-3">Spatial Elevation & Badge Tokens</h3>
+            
+            <div class="space-y-3">
+              <label class="text-xs text-text-muted font-medium block">Semantic Status Badges</label>
+              <div class="flex flex-wrap gap-2">
+                <span class="px-2.5 py-1 rounded-full text-xs font-medium border border-border" style="background-color: var(--color-primary-subtle); color: var(--color-primary);">
+                  Primary Dynamic
+                </span>
+                <span class="px-2.5 py-1 rounded-full text-xs font-medium border border-border" style="background-color: var(--color-secondary-subtle); color: var(--color-secondary-text);">
+                  Secondary Dynamic
+                </span>
+                <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  Success Active
+                </span>
+                <span class="px-2.5 py-1 rounded-full text-xs font-medium bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                  Critical Alert
+                </span>
+              </div>
+            </div>
+
+            <div class="pt-2">
+              <label class="text-xs text-text-muted font-medium block mb-2">Layered Translucency Hierarchy</label>
+              <div class="p-4 rounded-xl border border-border space-y-2" style="background-color: var(--color-surface);">
+                <div class="text-xs font-semibold">Surface Level 1 (Glass Panel)</div>
+                <div class="p-3 rounded-lg border border-border" style="background-color: var(--color-surface-raised);">
+                  <div class="text-xs font-medium">Surface Level 2 (Raised Layer)</div>
+                  <div class="p-2 rounded bg-black/5 dark:bg-white/5 mt-2 text-[11px] text-text-muted">
+                    Surface Level 3 (Nested Inset Overlay)
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- VIEW 2: DESIGN SYSTEM SPECIFICATION DOCUMENTATION -->
+      <div id="view-docs" class="hidden space-y-6">
+        <div class="glass-card rounded-2xl p-6 sm:p-8">
+          <div class="border-b border-border pb-5 mb-6">
+            <div class="flex items-center space-x-2 text-xs font-semibold uppercase tracking-wider mb-1" style="color: var(--color-primary);">
+              <i data-lucide="file-text" class="w-4 h-4"></i>
+              <span>System Design Architecture & README</span>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-bold tracking-tight">Apple-Inspired ERP Design Tokens Spec</h2>
+            <p class="text-sm text-text-muted mt-1">Complete blueprint for constructing scalable, high-performance enterprise user interfaces using dynamic two-accent variable tokens.</p>
+          </div>
+
+          <!-- Documentation Sections -->
+          <div class="prose dark:prose-invert max-w-none text-xs leading-relaxed space-y-8">
+            
+            <!-- Section 1 -->
+            <section class="space-y-3">
+              <h3 class="text-base font-bold text-text flex items-center space-x-2 border-b border-border pb-2">
+                <span class="w-6 h-6 rounded-lg flex items-center justify-center text-white text-[11px]" style="background-color: var(--color-primary);">1</span>
+                <span>Core Architectural Principles</span>
+              </h3>
+              <p class="text-text-muted">An Apple-esque ERP demands zero visual clutter, fluid micro-interactions (150ms-250ms curves), tabular mathematical alignment, and extreme color flexibility. By isolating all colors into dynamic CSS variables, the application can switch between Light, Dark, and custom brand themes instantly without rerendering component HTML.</p>
+            </div-section>
+
+            <!-- Section 2 -->
+            <section class="space-y-3">
+              <h3 class="text-base font-bold text-text flex items-center space-x-2 border-b border-border pb-2">
+                <span class="w-6 h-6 rounded-lg flex items-center justify-center text-white text-[11px]" style="background-color: var(--color-primary);">2</span>
+                <span>Token Structure & Naming Schema</span>
+              </h3>
+              <p class="text-text-muted">Components NEVER reference raw hex values. They map exclusively to semantic functional tokens:</p>
+              
+              <div class="bg-black/80 text-emerald-400 p-4 rounded-xl font-mono text-[11px] overflow-x-auto leading-normal">
+<pre>:root {
+  /* Dynamic Primary Accent System */
+  --color-primary: #0066CC;           /* Main CTA, Active Navigation */
+  --color-primary-hover: #0052A3;     /* Calculated hover luminance shift */
+  --color-primary-subtle: rgba(...); /* Row hover highlights, subtle badges */
+  --color-primary-text: #FFFFFF;     /* Contrast text on primary surface */
+
+  /* Dynamic Secondary Accent System */
+  --color-secondary: #5AC8FA;         /* Secondary highlights, progress bars */
+  --color-secondary-hover: #32ADE6;   /* Hover variant */
+  --color-secondary-subtle: rgba(...);/* Secondary badges & borders */
+
+  /* Spatial & Elevation Tokens */
+  --color-surface: rgba(255,255,255,0.85); /* Frosted glass backdrops */
+  --color-surface-raised: #FFFFFF;         /* Elevated cards & modals */
+  --color-border: rgba(0,0,0,0.08);         /* Soft structural borders */
+}</pre>
+              </div>
+            </section>
+
+            <!-- Section 3 -->
+            <section class="space-y-3">
+              <h3 class="text-base font-bold text-text flex items-center space-x-2 border-b border-border pb-2">
+                <span class="w-6 h-6 rounded-lg flex items-center justify-center text-white text-[11px]" style="background-color: var(--color-primary);">3</span>
+                <span>AI Agent Prompt Integration Protocol</span>
+              </h3>
+              <p class="text-text-muted">Copy and paste this ruleset into your AI code generator (e.g. Claude Code, Cursor) to enforce 100% design system compliance across all generated code:</p>
+              
+              <div class="bg-black/5 dark:bg-white/5 border border-border p-4 rounded-xl font-mono text-[11px] text-text space-y-2">
+                <div class="font-bold text-xs" style="color: var(--color-primary);">[SYSTEM_PROMPT_RULESET]</div>
+                <p>1. NEVER use hardcoded color values (e.g. `bg-blue-600`, `#0066CC`). Always use CSS tokens like `var(--color-primary)` or Tailwind token classes.</p>
+                <p>2. Interactive buttons MUST implement spring scaling (`active:scale-95` or `btn-spring`).</p>
+                <p>3. All financial, numeric, and inventory figures MUST use `font-variant-numeric: tabular-nums` to guarantee vertical column alignment.</p>
+                <p>4. Modals and overlay drawers MUST use backdrop blur filters (`backdrop-filter: blur(20px)`) to retain visual context.</p>
+              </div>
+            </section>
+
+            <!-- Section 4 -->
+            <section class="space-y-3">
+              <h3 class="text-base font-bold text-text flex items-center space-x-2 border-b border-border pb-2">
+                <span class="w-6 h-6 rounded-lg flex items-center justify-center text-white text-[11px]" style="background-color: var(--color-primary);">4</span>
+                <span>Motion & Spring Curves Scale</span>
+              </h3>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div class="p-3 rounded-xl border border-border bg-black/5 dark:bg-white/5">
+                  <div class="font-bold">Fast Micro-Interaction</div>
+                  <div class="font-mono text-[10px] text-text-muted">150ms cubic-bezier(0.25, 1, 0.5, 1)</div>
+                  <p class="mt-1 text-text-muted">Used for button presses, checkbox toggles, and active state transforms.</p>
+                </div>
+                <div class="p-3 rounded-xl border border-border bg-black/5 dark:bg-white/5">
+                  <div class="font-bold">Smooth Spatial Transition</div>
+                  <div class="font-mono text-[10px] text-text-muted">300ms cubic-bezier(0.16, 1, 0.3, 1)</div>
+                  <p class="mt-1 text-text-muted">Used for slide-over drawer modals, accordions, and dark mode toggles.</p>
+                </div>
+              </div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Slide-Over Record Drawer (Apple Frosted Backdrop Blur Modal) -->
+  <div id="drawer-backdrop" onclick="closeDrawer()" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 opacity-0 pointer-events-none transition-opacity duration-300"></div>
+  
+  <div id="record-drawer" class="fixed top-0 right-0 h-full w-full max-w-md glass-panel border-l border-border z-50 transform translate-x-full transition-transform duration-300 ease-apple-ease p-6 flex flex-col justify-between overflow-y-auto">
+    
+    <div>
+      <div class="flex items-center justify-between pb-4 border-b border-border mb-6">
+        <div>
+          <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-black/5 dark:bg-white/5 border border-border text-text-muted">ERP Record Detail</span>
+          <h3 id="drawer-title" class="font-bold text-lg tracking-tight mt-1">Transaction TX-90421</h3>
+        </div>
+        <button onclick="closeDrawer()" class="p-2 rounded-xl border border-border hover:bg-black/5 dark:hover:bg-white/5 btn-spring text-text">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs text-text-muted font-medium block mb-1">Entity Name</label>
+          <input id="drawer-entity" type="text" value="Acme Components Inc." class="w-full px-3.5 py-2 rounded-xl bg-black/5 dark:bg-white/5 border border-border text-xs focus:outline-none focus:ring-2" style="--tw-ring-color: var(--color-primary);">
+        </div>
+
+        <div>
+          <label class="text-xs text-text-muted font-medium block mb-1">Transaction Amount</label>
+          <input id="drawer-amount" type="text" value="$142,500.00" class="w-full px-3.5 py-2 rounded-xl bg-black/5 dark:bg-white/5 border border-border text-xs font-mono font-bold focus:outline-none focus:ring-2" style="--tw-ring-color: var(--color-primary);">
+        </div>
+
+        <div>
+          <label class="text-xs text-text-muted font-medium block mb-1">Approval Workflow Status</label>
+          <select class="w-full px-3.5 py-2 rounded-xl bg-black/5 dark:bg-white/5 border border-border text-xs focus:outline-none focus:ring-2" style="--tw-ring-color: var(--color-primary);">
+            <option>Approved by Finance VP</option>
+            <option>Pending Audit</option>
+            <option>Flagged for Compliance</option>
+          </select>
+        </div>
+
+        <div class="p-4 rounded-xl border border-border bg-black/5 dark:bg-white/5 space-y-2">
+          <div class="text-xs font-semibold">Audit Trail</div>
+          <div class="text-[11px] text-text-muted flex justify-between">
+            <span>Created by System Agent</span>
+            <span class="font-mono">10:24 AM</span>
+          </div>
+          <div class="text-[11px] text-text-muted flex justify-between">
+            <span>Matched with PO-88302</span>
+            <span class="font-mono">10:25 AM</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pt-6 border-t border-border flex items-center space-x-3">
+      <button onclick="closeDrawer()" class="flex-1 py-2.5 rounded-xl font-medium text-xs btn-spring shadow-sm text-center" style="background-color: var(--color-primary); color: var(--color-primary-text);">
+        Save Record
+      </button>
+      <button onclick="closeDrawer()" class="px-4 py-2.5 rounded-xl border border-border font-medium text-xs btn-spring bg-black/5 dark:bg-white/5">
+        Cancel
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Realtime Toast Notification Banner -->
+  <div id="toast-notification" class="fixed bottom-6 right-6 glass-card rounded-2xl p-4 border border-border z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center space-x-3 shadow-2xl max-w-sm">
+    <div class="w-8 h-8 rounded-xl flex items-center justify-center text-white" style="background-color: var(--color-primary);">
+      <i data-lucide="check" class="w-4 h-4"></i>
+    </div>
+    <div>
+      <div class="text-xs font-bold text-text">ERP Action Executed</div>
+      <div class="text-[11px] text-text-muted">New purchase order draft created successfully.</div>
+    </div>
+  </div>
+
+  <!-- JavaScript Engine -->
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Dark Mode Controller
+    function toggleDarkMode() {
+      document.documentElement.classList.toggle('dark');
+    }
+
+    // Tab Switcher
+    function switchTab(tab) {
+      const demoView = document.getElementById('view-demo');
+      const docsView = document.getElementById('view-docs');
+      const demoBtn = document.getElementById('nav-demo-btn');
+      const docsBtn = document.getElementById('nav-docs-btn');
+
+      if (tab === 'demo') {
+        demoView.classList.remove('hidden');
+        docsView.classList.add('hidden');
+        
+        demoBtn.className = "px-3.5 py-1.5 rounded-lg transition-all duration-200 btn-spring shadow-sm font-semibold";
+        demoBtn.style.backgroundColor = "var(--color-surface-raised)";
+        demoBtn.style.color = "var(--color-text)";
+
+        docsBtn.className = "px-3.5 py-1.5 rounded-lg transition-all duration-200 btn-spring text-text-muted hover:text-text";
+        docsBtn.style.backgroundColor = "transparent";
+      } else {
+        demoView.classList.add('hidden');
+        docsView.classList.remove('hidden');
+
+        docsBtn.className = "px-3.5 py-1.5 rounded-lg transition-all duration-200 btn-spring shadow-sm font-semibold";
+        docsBtn.style.backgroundColor = "var(--color-surface-raised)";
+        docsBtn.style.color = "var(--color-text)";
+
+        demoBtn.className = "px-3.5 py-1.5 rounded-lg transition-all duration-200 btn-spring text-text-muted hover:text-text";
+        demoBtn.style.backgroundColor = "transparent";
+      }
+    }
+
+    // Dynamic Color Engine calculation functions
+    function hexToRgb(hex) {
+      hex = hex.replace('#', '');
+      if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+      const bigint = parseInt(hex, 16);
+      return {
+        r: (bigint >> 16) & 255,
+        g: (bigint >> 8) & 255,
+        b: bigint & 255
+      };
+    }
+
+    function adjustLuminance(hex, factor) {
+      const rgb = hexToRgb(hex);
+      const r = Math.min(255, Math.max(0, Math.round(rgb.r * factor)));
+      const g = Math.min(255, Math.max(0, Math.round(rgb.g * factor)));
+      const b = Math.min(255, Math.max(0, Math.round(rgb.b * factor)));
+      return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+    }
+
+    function getContrastTextColor(hex) {
+      const rgb = hexToRgb(hex);
+      // Relative luminance calculation
+      const luminance = (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) / 255;
+      return luminance > 0.5 ? '#000000' : '#FFFFFF';
+    }
+
+    // Live Color Updaters
+    function updatePrimaryColor(hex) {
+      if (!/^#[0-9A-F]{6}$/i.test(hex)) return;
+      
+      const root = document.documentElement;
+      const rgb = hexToRgb(hex);
+      const hoverHex = adjustLuminance(hex, 0.85);
+      const textColor = getContrastTextColor(hex);
+
+      root.style.setProperty('--color-primary', hex);
+      root.style.setProperty('--color-primary-hover', hoverHex);
+      root.style.setProperty('--color-primary-subtle', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.1)`);
+      root.style.setProperty('--color-primary-text', textColor);
+
+      document.getElementById('primary-hex-display').textContent = hex.toUpperCase();
+      document.getElementById('primary-hex-input').value = hex.toUpperCase();
+      document.getElementById('primary-color-input').value = hex;
+    }
+
+    function updateSecondaryColor(hex) {
+      if (!/^#[0-9A-F]{6}$/i.test(hex)) return;
+
+      const root = document.documentElement;
+      const rgb = hexToRgb(hex);
+      const hoverHex = adjustLuminance(hex, 0.85);
+      const textColor = getContrastTextColor(hex);
+
+      root.style.setProperty('--color-secondary', hex);
+      root.style.setProperty('--color-secondary-hover', hoverHex);
+      root.style.setProperty('--color-secondary-subtle', `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.12)`);
+      root.style.setProperty('--color-secondary-text', textColor);
+
+      document.getElementById('secondary-hex-display').textContent = hex.toUpperCase();
+      document.getElementById('secondary-hex-input').value = hex.toUpperCase();
+      document.getElementById('secondary-color-input').value = hex;
+    }
+
+    function applyPreset(primaryHex, secondaryHex) {
+      updatePrimaryColor(primaryHex);
+      updateSecondaryColor(secondaryHex);
+    }
+
+    // Record Drawer Trigger
+    function openDrawer(id = 'TX-90421', name = 'Acme Components Inc.', amount = '$142,500.00') {
+      document.getElementById('drawer-title').textContent = `Transaction ${id}`;
+      document.getElementById('drawer-entity').value = name;
+      document.getElementById('drawer-amount').value = amount;
+
+      const backdrop = document.getElementById('drawer-backdrop');
+      const drawer = document.getElementById('record-drawer');
+
+      backdrop.classList.remove('pointer-events-none');
+      backdrop.classList.add('opacity-100');
+      drawer.classList.remove('translate-x-full');
+    }
+
+    function closeDrawer() {
+      const backdrop = document.getElementById('drawer-backdrop');
+      const drawer = document.getElementById('record-drawer');
+
+      backdrop.classList.remove('opacity-100');
+      backdrop.classList.add('pointer-events-none');
+      drawer.classList.add('translate-x-full');
+    }
+
+    // Toast Notification
+    function triggerNotification() {
+      const toast = document.getElementById('toast-notification');
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    // On Load Initialization
+    window.onload = function() {
+      updatePrimaryColor('#0066CC');
+      updateSecondaryColor('#5AC8FA');
+    };
+  </script>
+</body>
+</html>

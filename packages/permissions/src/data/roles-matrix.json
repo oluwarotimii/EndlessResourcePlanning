@@ -1,0 +1,229 @@
+{
+ "areas": [
+  "Web and app",
+  "Stores (POS)",
+  "CRM",
+  "Digital media",
+  "Marketing",
+  "Customer success",
+  "Procurement",
+  "Warehouse",
+  "Stock control",
+  "Returns",
+  "Delivery",
+  "Repairs",
+  "Cash-up",
+  "Credit sales",
+  "Expenses",
+  "Accounting",
+  "Payments",
+  "Payroll",
+  "Tax and VAT",
+  "HR and staff",
+  "Assets",
+  "Audit",
+  "Reporting",
+  "Admin and IT"
+ ],
+ "roles": {
+  "Admin / IT": {
+   "Web and app": "VE",
+   "Reporting": "V",
+   "Admin and IT": "VCE"
+  },
+  "MD / Executive": {
+   "Web and app": "V",
+   "Stores (POS)": "V",
+   "CRM": "V",
+   "Digital media": "VA",
+   "Marketing": "VA",
+   "Customer success": "V",
+   "Procurement": "VA",
+   "Warehouse": "V",
+   "Stock control": "VA",
+   "Returns": "VA",
+   "Delivery": "V",
+   "Repairs": "V",
+   "Cash-up": "V",
+   "Credit sales": "VA",
+   "Expenses": "VA",
+   "Accounting": "V",
+   "Payments": "VA",
+   "Payroll": "VA",
+   "Tax and VAT": "V",
+   "HR and staff": "V",
+   "Assets": "VA",
+   "Audit": "V",
+   "Reporting": "V",
+   "Admin and IT": "VA"
+  },
+  "Branch manager": {
+   "Web and app": "V",
+   "Stores (POS)": "VCEA",
+   "CRM": "VC",
+   "Customer success": "V",
+   "Warehouse": "VCE",
+   "Stock control": "VCEA",
+   "Returns": "VCEA",
+   "Delivery": "VCE",
+   "Repairs": "V",
+   "Cash-up": "VCE",
+   "Credit sales": "VCEA",
+   "Expenses": "VCEA",
+   "HR and staff": "VA",
+   "Assets": "VC",
+   "Reporting": "V"
+  },
+  "Cashier": {
+   "Web and app": "V",
+   "Stores (POS)": "VC",
+   "CRM": "V",
+   "Returns": "VC",
+   "Cash-up": "VC",
+   "Credit sales": "VC",
+   "Payments": "V"
+  },
+  "Sales rep": {
+   "Web and app": "V",
+   "Stores (POS)": "VC",
+   "CRM": "VC",
+   "Warehouse": "V",
+   "Credit sales": "VC",
+   "Expenses": "VC"
+  },
+  "Digital media": {
+   "Web and app": "VE",
+   "CRM": "V",
+   "Digital media": "VCE",
+   "Marketing": "V",
+   "Reporting": "V"
+  },
+  "Marketing manager": {
+   "Web and app": "V",
+   "CRM": "VE",
+   "Digital media": "VCE",
+   "Marketing": "VCE",
+   "Customer success": "V",
+   "Expenses": "VC",
+   "Reporting": "V"
+  },
+  "Customer success manager": {
+   "Web and app": "V",
+   "CRM": "VCE",
+   "Customer success": "VCEA",
+   "Returns": "VC",
+   "Delivery": "V",
+   "Repairs": "V",
+   "Credit sales": "V",
+   "Expenses": "VC",
+   "Payments": "V",
+   "Reporting": "V"
+  },
+  "Customer support": {
+   "Web and app": "V",
+   "CRM": "VCE",
+   "Customer success": "VC",
+   "Returns": "VC",
+   "Delivery": "V",
+   "Repairs": "V"
+  },
+  "Technician": {
+   "CRM": "V",
+   "Warehouse": "VC",
+   "Repairs": "VCE",
+   "Expenses": "VC"
+  },
+  "Warehouse officer": {
+   "Procurement": "V",
+   "Warehouse": "VCE",
+   "Stock control": "VC",
+   "Returns": "VC",
+   "Delivery": "VC",
+   "Expenses": "VC",
+   "Reporting": "V"
+  },
+  "Stock controller": {
+   "Warehouse": "V",
+   "Stock control": "VCE",
+   "Returns": "V",
+   "Reporting": "V"
+  },
+  "Delivery coordinator": {
+   "Web and app": "V",
+   "CRM": "V",
+   "Warehouse": "V",
+   "Returns": "V",
+   "Delivery": "VCE",
+   "Expenses": "VC"
+  },
+  "Rider / courier": {
+   "Delivery": "VE",
+   "Cash-up": "VC",
+   "Expenses": "VC"
+  },
+  "Procurement officer": {
+   "Procurement": "VCE",
+   "Warehouse": "V",
+   "Accounting": "V",
+   "Assets": "VCE",
+   "Reporting": "V"
+  },
+  "Credit controller": {
+   "CRM": "V",
+   "Credit sales": "VCE",
+   "Accounting": "V",
+   "Payments": "V",
+   "Reporting": "V"
+  },
+  "Cash controller": {
+   "Cash-up": "VCEA",
+   "Expenses": "VCE",
+   "Accounting": "V",
+   "Payments": "V",
+   "Reporting": "V"
+  },
+  "Accountant": {
+   "Stores (POS)": "V",
+   "Procurement": "V",
+   "Cash-up": "V",
+   "Credit sales": "VCE",
+   "Expenses": "VCE",
+   "Accounting": "VCE",
+   "Payments": "VCE",
+   "Payroll": "V",
+   "Tax and VAT": "VCE",
+   "Assets": "VCE",
+   "Reporting": "V"
+  },
+  "HR officer": {
+   "Payroll": "VCE",
+   "HR and staff": "VCE",
+   "Reporting": "V"
+  },
+  "Auditor": {
+   "Web and app": "V",
+   "Stores (POS)": "V",
+   "CRM": "V",
+   "Digital media": "V",
+   "Marketing": "V",
+   "Customer success": "V",
+   "Procurement": "V",
+   "Warehouse": "V",
+   "Stock control": "VC",
+   "Returns": "V",
+   "Delivery": "V",
+   "Repairs": "V",
+   "Cash-up": "V",
+   "Credit sales": "V",
+   "Expenses": "V",
+   "Accounting": "V",
+   "Payments": "V",
+   "Payroll": "V",
+   "Tax and VAT": "V",
+   "HR and staff": "V",
+   "Assets": "VC",
+   "Audit": "VC",
+   "Reporting": "V"
+  }
+ }
+}

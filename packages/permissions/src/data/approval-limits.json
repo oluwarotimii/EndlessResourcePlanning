@@ -1,0 +1,138 @@
+[
+ {
+  "control": "Discount at till",
+  "placeholder": false,
+  "actor": "Cashier",
+  "limit": 0,
+  "unit": "% of sale",
+  "above": "Branch manager"
+ },
+ {
+  "control": "Discount",
+  "placeholder": false,
+  "actor": "Branch manager",
+  "limit": 3,
+  "unit": "% of sale",
+  "above": "MD"
+ },
+ {
+  "control": "Refund or void",
+  "placeholder": false,
+  "actor": "Branch manager",
+  "limit": 50000,
+  "unit": "NGN per item",
+  "above": "MD"
+ },
+ {
+  "control": "Stock write-off",
+  "placeholder": false,
+  "actor": "Branch manager, with Auditor",
+  "limit": 100000,
+  "unit": "NGN per write-off",
+  "above": "MD"
+ },
+ {
+  "control": "Purchase order",
+  "placeholder": false,
+  "actor": "Procurement officer",
+  "limit": 500000,
+  "unit": "NGN per PO",
+  "above": "MD"
+ },
+ {
+  "control": "New supplier",
+  "placeholder": false,
+  "actor": "Procurement officer",
+  "limit": 2,
+  "unit": "approvals needed",
+  "above": "(also TIN check)"
+ },
+ {
+  "control": "Payout, single payee",
+  "placeholder": false,
+  "actor": "Accountant prepares",
+  "limit": 100000,
+  "unit": "NGN per payee",
+  "above": "MD one-time code"
+ },
+ {
+  "control": "Payout, batch",
+  "placeholder": false,
+  "actor": "Accountant prepares",
+  "limit": 1000000,
+  "unit": "NGN per batch",
+  "above": "MD one-time code"
+ },
+ {
+  "control": "Payout, daily cap",
+  "placeholder": false,
+  "actor": "System",
+  "limit": 2000000,
+  "unit": "NGN per day",
+  "above": "Blocked"
+ },
+ {
+  "control": "Payee account change hold",
+  "placeholder": false,
+  "actor": "System",
+  "limit": 24,
+  "unit": "hours",
+  "above": "Released after hold"
+ },
+ {
+  "control": "Price change",
+  "placeholder": false,
+  "actor": "Digital media / Marketing",
+  "limit": 5,
+  "unit": "% margin shift",
+  "above": "MD"
+ },
+ {
+  "control": "credit limit change",
+  "placeholder": true,
+  "actor": "Credit controller",
+  "limit": 500000,
+  "unit": "NGN per customer",
+  "above": "MD"
+ },
+ {
+  "control": "credit sale over limit or overdue",
+  "placeholder": true,
+  "actor": "Branch manager",
+  "limit": 0,
+  "unit": "NGN (block unless approved)",
+  "above": "MD"
+ },
+ {
+  "control": "expense claim",
+  "placeholder": true,
+  "actor": "Branch manager",
+  "limit": 20000,
+  "unit": "NGN per claim",
+  "above": "MD"
+ },
+ {
+  "control": "branch petty cash float",
+  "placeholder": true,
+  "actor": "Cash controller",
+  "limit": 100000,
+  "unit": "NGN per branch",
+  "above": "MD"
+ },
+ {
+  "control": "item treated as an asset",
+  "placeholder": true,
+  "actor": "Accountant",
+  "limit": 100000,
+  "unit": "NGN minimum cost",
+  "above": "(below = expense)"
+ },
+ {
+  "control": "asset disposal or write-off",
+  "placeholder": true,
+  "actor": "Accountant prepares",
+  "limit": 0,
+  "unit": "NGN (always MD)",
+  "above": "MD"
+ }
+]

@@ -1,0 +1,21 @@
+{
+  "brand": { "name": "Demo", "suffix": "Retail", "tagline": "Branch operations" },
+  "theme": { "default": "aura", "available": ["aura", "wireframe"], "defaultMode": "light" },
+  "locale": "en-NG",
+  "currency": "NGN",
+  "branch": { "name": "Pilot Branch" },
+  "taskRoles": ["Cashier", "Rider / courier", "Technician"],
+  "enabledScopes": ["MVP"],
+  "print": {
+    "paper": "A5",
+    "copyLabel": "COPY",
+    "autoPrint": false,
+    "company": { "legalName": "Demo Retail Ltd", "address": "1 Sample Street, Lagos", "phone": "+234 800 000 0000" },
+    "bank": { "name": "Sample Bank", "accountName": "Demo Retail Ltd", "accountNumber": "0000000000" }
+  },
+  "tax": { "mode": "inclusive", "vatRate": 0.075, "vatNumber": "TIN 00000000-0001" },
+  "till": { "paymentMethods": ["cash", "transfer", "card", "credit", "other"], "allowSplitPayments": true },
+  "offline": { "maxOfflineSalesPerTill": 50, "syncWindowHours": 12 },
+  "security": { "idleLockMinutes": 5 },
+  "touch": { "minPx": 48, "tillPx": 56 }
+}

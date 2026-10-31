@@ -1,0 +1,3 @@
+{ "name": "@erp/tokens", "version": "0.1.0", "private": true, "type": "module",
+  "exports": { ".": "./src/index.mjs", "./tokens.css": "./dist/tokens.css" },
+  "scripts": { "build": "node src/cli.mjs", "typecheck": "echo tokens: plain JS, nothing to typecheck" } }

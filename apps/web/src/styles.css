@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--font-sans);
+    background: linear-gradient(135deg, var(--color-bg-start), var(--color-bg-end)) fixed;
+    color: var(--color-text);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color var(--duration-spatial) var(--ease-spatial);
+  }
+  :focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+}
+
+@layer components {
+  /* Frosted glass panel: header, drawers, modals. */
+  .glass-panel {
+    background-color: var(--color-surface);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--color-border);
+  }
+  /* Raised card with soft lift on hover. */
+  .glass-card {
+    background-color: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+    transition: box-shadow var(--duration-fast) var(--ease-spatial), transform var(--duration-fast) var(--ease-spatial);
+  }
+  .glass-card-lift:hover { box-shadow: var(--shadow-lift); transform: translateY(var(--lift-distance)); }
+  /* Spring press on every interactive button. */
+  .btn-spring {
+    transition: transform var(--duration-fast) var(--ease-snap), background-color 200ms ease, box-shadow 200ms ease;
+  }
+  .btn-spring:active { transform: scale(var(--press-scale)); }
+  /* Money, stock and counts always align in columns. */
+  .tabular { font-variant-numeric: tabular-nums; }
+  .scrim { background-color: var(--color-scrim); backdrop-filter: var(--scrim-blur); -webkit-backdrop-filter: var(--scrim-blur); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* Printing: only the document prints, on the paper size from tenant.json. */
+.print-area { display: none; }
+@media print {
+  body > #root { display: none !important; }
+  .print-area { display: block; }
+  body { background: none; }
+  .print-doc { max-width: none; box-shadow: none; }
+}
