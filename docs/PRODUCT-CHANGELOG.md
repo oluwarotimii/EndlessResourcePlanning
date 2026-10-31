@@ -2,6 +2,21 @@
 
 Every change that alters what the product does, for users or for the business, gets an entry here **in the same change**, newest first. Each entry says what changed, which documents were updated, and what is still open. The rule is in `CLAUDE.md`; `docs/HANDOVER.md` has the checklist.
 
+## 2026-11-06, Seven demo branches, transfers signed at both ends, permissions given to people, purchase orders (R01), cashierless comparison
+
+**What changed**
+- **Demo branches.** Seven made-up branches with their own stock, a manager and a stock officer each (decision 48). No screen depends on a name; the real branches come from ERPNext.
+- **Transfers.** The sending branch's stock officer or manager sends (goods show as in transit); the receiving branch's stock officer or manager counts and signs; stock is added to the receiving branch (decision 49). Anyone from another branch, or the asker, is refused. Transfers and requests now record where they are going (`toBranch`).
+- **Permissions given to a person.** A person holds their own role plus any they were given (decision 50). Demo: a Sales rep given Procurement officer can raise purchase orders, a plain Sales rep cannot.
+- **R01, purchase orders.** Raise an order with a supplier, items and quantities; it appears on H01 for the warehouse to receive. New file `packages/permissions/src/data/scope-overrides.json` marks screens built earlier than planned (decision 51).
+- **Cashierless comparison.** New `docs/CASHIERLESS-ALIGNMENT.md` (the proposal against the build, the recommended order, risks, four questions) and Scenario 18 (the customer who takes one more item than they paid for).
+**Documents updated:** `DECISIONS.md` (48 to 52 and an open question), `SCENARIOS.md` (18), `ERPNEXT-MAPPING.md` (three rows), `FRAPPE-APP-SPEC.md` (the purchase-orders row), `SCREEN-STATUS.md` and `screen-status-notes.json` (R01), `CASHIERLESS-ALIGNMENT.md` (new), this entry.
+- **Faulty-return inspection (decision 41).** A faulty return waits in a check area; an inspector (anyone with the Stock control permission, not the cashier who took it) restocks it or sends it to the supplier (RMA). A change-of-mind return goes straight back on the shelf.
+- **Credit partners and approval by account (decisions 42, 43).** Two made-up partners (Credit Direct, Quick Lend Finance). A sale's credit can be billed to a partner, using its limit; credit over the limit goes to the approvers that account names. New demo user: a Credit controller.
+- **Fix a wrong-variant sale (decision 53).** A manager (not the cashier who made the sale) swaps the items: stock of both corrected, the difference collected, refunded or covered by the shop, and a report of mix-ups by cashier.
+**Not built yet:** screens for these last three (the server and tests are done), the real document correction in ERPNext, and anything for the cashierless store beyond the comparison.
+**Open:** the real branches; approval of a purchase order; prices on orders; the cashierless answers (Scenario 18 and the four questions in the alignment page); real return days, partners, limits and inspectors (Scenarios 16, 17).
+
 ## 2026-11-05, Branch-to-branch stock requests (decision 47)
 
 **What changed:** a branch can now ask a sister branch for stock, not only the warehouse — the owner's own example: a branch wants to sell something it does not have, so it asks another branch, and sells it once received. Nothing in the source documents described this (only "the warehouse packs and sends" was ever written down), so it was built by generalising the existing screens rather than inventing new ones:

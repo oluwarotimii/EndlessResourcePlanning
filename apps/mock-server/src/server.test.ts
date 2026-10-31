@@ -658,9 +658,36 @@ describe("branch-to-branch stock request: a sister branch can fulfill a request 
 
   it("lists sister branches to ask, excluding the caller's own", async () => {
     const manager = await as("u-manager", "2222");
-    expect(((await (await get("/api/branches", manager)).json()) as { branches: string[] }).branches).toEqual(["Victoria Island Branch"]);
+    expect(((await (await get("/api/branches", manager)).json()) as { branches: string[] }).branches).toEqual(["Victoria Island Branch", "Ikeja Branch", "Lekki Branch", "Yaba Branch", "Surulere Branch", "Ajah Branch", "Ikorodu Branch"]);
     const sister = await as("u-warehouse2", "3334");
-    expect(((await (await get("/api/branches", sister)).json()) as { branches: string[] }).branches).toEqual([]);
+    const others = ((await (await get("/api/branches", sister)).json()) as { branches: string[] }).branches;
+    expect(others).toHaveLength(6);
+    expect(others).not.toContain("Victoria Island Branch");
+  });
+
+  it("a transfer between two sister branches is signed at both ends: the sender's officer or manager, then the receiving branch's", async () => {
+    const ikejaManager = await as("u-mgr-ikeja", "3401");
+    const lekkiManager = await as("u-mgr-lekki", "3411");
+    const lekkiStock = await as("u-stk-lekki", "3412");
+    const ikejaStock = await as("u-stk-ikeja", "3402");
+    const yabaManager = await as("u-mgr-yaba", "3421");
+    const { request: req } = (await (await request(ikejaManager, { fromBranch: "Lekki Branch", lines: [{ productId: "p4", qty: 4 }] })).json()) as { request: Req & { toBranch?: string } };
+    expect(req.toBranch).toBe("Ikeja Branch");
+    expect((await dispatch(yabaManager, req.id, [{ productId: "p4", qty: 4 }])).status).toBe(403); // another branch cannot send Lekki's stock
+    expect((await dispatch(ikejaManager, req.id, [{ productId: "p4", qty: 4 }])).status).toBe(403); // nor can the asker send it to themselves
+    const sent = await dispatch(lekkiManager, req.id, [{ productId: "p4", qty: 4 }]); // Lekki's manager signs the send
+    expect(sent.status).toBe(200);
+    const transfer = ((await sent.json()) as { transfer: { id: string; status: string; toBranch?: string } }).transfer;
+    expect(transfer).toMatchObject({ status: "in_transit", toBranch: "Ikeja Branch" });
+    const receive = (h: Record<string, string>) => post(`/api/transfers/${transfer.id}/receive`, { idempotencyKey: uuid(), lines: [{ productId: "p4", qty: 4 }] }, h);
+    expect((await receive(lekkiStock)).status).toBe(403); // the sending branch cannot sign for arrival
+    expect((await receive(yabaManager)).status).toBe(403); // neither can an unrelated branch
+    expect((await receive(ikejaStock)).status).toBe(200); // Ikeja's stock officer signs for it
+    const lekki = await stockOf(ikejaManager, "p4");
+    expect(lekki.branches["Lekki Branch"]).toBe(5); // 9 - 4
+    expect(lekki.branches["Ikeja Branch"]).toBeUndefined(); // the viewer's own branch is never in its own list
+    const asLekki = await stockOf(lekkiManager, "p4");
+    expect(asLekki.branches["Ikeja Branch"]).toBe(4); // now held by Ikeja
   });
 
   it("refuses a request from your own branch or an unknown one", async () => {
@@ -1146,5 +1173,193 @@ describe("return window: days depend on the product, its category and whether it
     expect((await run("p1", "Phone charger 20W", 6500, 31, "Faulty item")).status).toBe(400);
     expect((await run("p3", "Bluetooth earbuds", 18500, 4, "Customer changed their mind")).status).toBe(400);
     expect((await run("p3", "Bluetooth earbuds", 18500, 4, "Faulty item")).status).toBe(200);
+  });
+});
+
+describe("purchase orders: raising one is a permission that can be given to a person, not a job title", () => {
+  const uuid = () => crypto.randomUUID();
+  const as = async (userId: string, pin: string) => ({ authorization: `Bearer ${LoginResponse.parse(await (await post("/api/login", { userId, pin })).json()).token}` });
+  const raise = (h: Record<string, string>, body: Record<string, unknown> = {}, key = uuid()) =>
+    post("/api/purchase-orders", { idempotencyKey: key, supplierName: "Ikeja Wholesale Ltd", lines: [{ productId: "p2", qty: 40 }], ...body }, h);
+  it("a procurement officer, and a sales rep who was given the role, can raise one; a plain sales rep cannot", async () => {
+    const proc = await as("u-proc", "4001");
+    const given = await as("u-rep", "4002");
+    const plain = await as("u-rep2", "4003");
+    expect((await raise(proc)).status).toBe(200);
+    expect((await raise(given)).status).toBe(200);
+    const refused = await raise(plain);
+    expect(refused.status).toBe(403);
+    expect(((await refused.json()) as { message: string }).message).toContain("permission");
+  });
+  it("shows who raised it, refuses a bad order, and a retry never raises two", async () => {
+    const given = await as("u-rep", "4002");
+    const key = uuid();
+    const first = (await (await raise(given, {}, key)).json()) as { purchaseOrder: { id: string; status: string; raisedBy?: { name: string } }; duplicate: boolean };
+    expect(first.purchaseOrder).toMatchObject({ status: "open", raisedBy: { name: "Zainab Idris" } });
+    const again = (await (await raise(given, {}, key)).json()) as { purchaseOrder: { id: string }; duplicate: boolean };
+    expect(again.duplicate).toBe(true);
+    expect(again.purchaseOrder.id).toBe(first.purchaseOrder.id);
+    expect((await raise(given, { lines: [] })).status).toBe(400);
+    expect((await raise(given, { lines: [{ productId: "nope", qty: 1 }] })).status).toBe(400);
+  });
+  it("the given permission also shows in the person's capabilities", async () => {
+    const given = await as("u-rep", "4002");
+    const c = Capabilities.parse(await (await fetch(`${base}/api/capabilities`, { headers: given })).json());
+    expect(c.roles).toEqual(["Sales rep", "Procurement officer"]);
+    expect(c.areas["Procurement"]).toContain("C");
+  });
+});
+
+describe("faulty returns wait for an inspector, who decides: back on the shelf or back to the supplier (RMA)", () => {
+  const uuid = () => crypto.randomUUID();
+  const as = async (userId: string, pin: string) => ({ authorization: `Bearer ${LoginResponse.parse(await (await post("/api/login", { userId, pin })).json()).token}` });
+  const get = (path: string, h: Record<string, string>) => fetch(`${base}${path}`, { headers: h });
+  type R = { returnNo: string; faulty?: boolean; inspection?: { status: string; by?: { name: string } } };
+  const makeReturn = async (reason: string) => {
+    const cashier = await as("u-cashier", "1111");
+    const manager = await as("u-manager", "2222");
+    const shiftId = uuid();
+    await post("/api/shifts/open", { idempotencyKey: uuid(), shiftId, openedAt: new Date().toISOString(), openingFloat: 20000 }, cashier);
+    const saleKey = uuid();
+    await post("/api/sales", { idempotencyKey: saleKey, clientCreatedAt: new Date().toISOString(), shiftId, lines: [{ productId: "p2", name: "USB-C cable 1m", unitPrice: 2500, qty: 2 }], subtotal: 5000, vatMode: "inclusive", vat: 349, total: 5000, payments: [{ method: "cash", amount: 5000 }] }, cashier);
+    const lines = [{ productId: "p2", qty: 1 }];
+    const ap = ((await (await post("/api/approvals", { idempotencyKey: uuid(), kind: "refund", amount: 1, unit: "naira", refund: { saleKey, lines, reason } }, cashier)).json()) as { approval: { id: string } }).approval;
+    await post(`/api/approvals/${ap.id}/decision`, { idempotencyKey: uuid(), decision: "approve" }, manager);
+    await post(`/api/approvals/${ap.id}/decision`, { idempotencyKey: uuid(), decision: "approve" }, await as("u-cashctl", "9999"));
+    const res = await post("/api/returns", { idempotencyKey: uuid(), clientCreatedAt: new Date().toISOString(), shiftId, saleKey, lines, reason, refundMethod: "cash", approvalId: ap.id }, cashier);
+    return { ret: ((await res.json()) as { ret: R }).ret, status: res.status };
+  };
+  const stockP2 = async (h: Record<string, string>) => ((await (await get("/api/products", h)).json()) as { products: Array<{ id: string; stock: number }> }).products.find((p) => p.id === "p2")!.stock;
+
+  it("a change of mind goes straight back on the shelf; a faulty item does not", async () => {
+    const manager = await as("u-manager", "2222");
+    const before = await stockP2(manager);
+    const mind = await makeReturn("Customer changed their mind");
+    expect(mind.ret.inspection).toBeUndefined();
+    expect(await stockP2(manager)).toBe(before - 1); // the sale took 2 off the shelf, the return put 1 back
+    const faulty = await makeReturn("Faulty item");
+    expect(faulty.ret).toMatchObject({ faulty: true, inspection: { status: "pending" } });
+    expect(await stockP2(manager)).toBe(before - 3); // a second sale of 2, and the faulty one is NOT back on the shelf yet
+  });
+  it("an inspector restocks one and sends another back to the supplier; the person who took it cannot inspect it; a retry never restocks twice", async () => {
+    const stockCtl = await as("u-stock", "4444");
+    const cashier = await as("u-cashier", "1111");
+    const manager = await as("u-manager", "2222");
+    const a = (await makeReturn("Faulty item")).ret;
+    const b = (await makeReturn("Damaged in transit")).ret;
+    const before = await stockP2(manager);
+    const inspect = (h: Record<string, string>, no: string, outcome: string, key = uuid()) => post(`/api/returns/${no}/inspect`, { idempotencyKey: key, outcome }, h);
+    expect((await inspect(cashier, a.returnNo, "restock")).status).toBe(403); // a cashier has not been given this permission
+    const key = uuid();
+    expect((await inspect(stockCtl, a.returnNo, "restock", key)).status).toBe(200);
+    expect((await inspect(stockCtl, a.returnNo, "restock", key)).status).toBe(200); // retry: same answer
+    expect(await stockP2(manager)).toBe(before + 1); // restocked once
+    expect((await inspect(stockCtl, a.returnNo, "rma")).status).toBe(400); // already inspected
+    const rma = (await (await inspect(stockCtl, b.returnNo, "rma")).json()) as { ret: R };
+    expect(rma.ret.inspection).toMatchObject({ status: "rma", by: { name: "Ibrahim Musa" } });
+    expect(await stockP2(manager)).toBe(before + 1); // RMA does not add stock
+    const list = ((await (await get("/api/returns/inspections", stockCtl)).json()) as { returns: R[] }).returns;
+    expect(list.map((r) => r.returnNo)).toEqual(expect.arrayContaining([a.returnNo, b.returnNo]));
+  });
+  it("a warehouse (stock) officer can inspect too: the permission, not the job title, decides", async () => {
+    const officer = await as("u-warehouse", "3333");
+    const r = (await makeReturn("Faulty item")).ret;
+    expect((await post(`/api/returns/${r.returnNo}/inspect`, { idempotencyKey: uuid(), outcome: "restock" }, officer)).status).toBe(200);
+  });
+});
+
+describe("fixing a wrong-variant sale (Scenario 13): Black sold as Clear", () => {
+  const uuid = () => crypto.randomUUID();
+  const as = async (userId: string, pin: string) => ({ authorization: `Bearer ${LoginResponse.parse(await (await post("/api/login", { userId, pin })).json()).token}` });
+  const get = (path: string, h: Record<string, string>) => fetch(`${base}${path}`, { headers: h });
+  const stockOf = async (h: Record<string, string>) => {
+    const ps = ((await (await get("/api/products", h)).json()) as { products: Array<{ id: string; stock: number }> }).products;
+    return { clear: ps.find((p) => p.id === "p6")!.stock, black: ps.find((p) => p.id === "p13")!.stock };
+  };
+  const soldAsClear = async () => {
+    const cashier = await as("u-cashier", "1111");
+    const shiftId = uuid();
+    await post("/api/shifts/open", { idempotencyKey: uuid(), shiftId, openedAt: new Date().toISOString(), openingFloat: 20000 }, cashier);
+    const saleKey = uuid();
+    await post("/api/sales", { idempotencyKey: saleKey, clientCreatedAt: new Date().toISOString(), shiftId, lines: [{ productId: "p6", name: "Clear phone case", unitPrice: 3000, qty: 1 }], subtotal: 3000, vatMode: "inclusive", vat: 209, total: 3000, payments: [{ method: "cash", amount: 3000 }] }, cashier);
+    return { cashier, saleKey };
+  };
+  const fix = (h: Record<string, string>, saleKey: string, body: Record<string, unknown> = {}, key = uuid()) =>
+    post("/api/sales/correct-variant", { idempotencyKey: key, saleKey, wrongProductId: "p6", rightProductId: "p13", qty: 1, settlement: "collected", note: "Customer took the black one", ...body }, h);
+
+  it("a manager fixes it: both stocks are corrected once, the ₦500 difference is settled, and it is recorded against the cashier", async () => {
+    const manager = await as("u-manager", "2222");
+    const { saleKey } = await soldAsClear();
+    const before = await stockOf(manager); // after the sale: Clear already down by 1
+    const key = uuid();
+    const done = (await (await fix(manager, saleKey, {}, key)).json()) as { correction: { id: string; difference: number; soldBy: { name: string }; fixedBy: { name: string }; wrongName: string; rightName: string }; duplicate: boolean };
+    expect(done.correction).toMatchObject({ difference: 500, soldBy: { name: "Amaka Obi" }, fixedBy: { name: "Tunde Bello" }, wrongName: "Clear phone case", rightName: "Black phone case" });
+    const after = await stockOf(manager);
+    expect(after).toEqual({ clear: before.clear + 1, black: before.black - 1 });
+    const again = (await (await fix(manager, saleKey, {}, key)).json()) as { duplicate: boolean };
+    expect(again.duplicate).toBe(true);
+    expect(await stockOf(manager)).toEqual(after); // a retry moved nothing
+    const report = (await (await get("/api/reports/mixups", manager)).json()) as { rows: Array<{ cashier: { name: string }; count: number; netDifference: number }> };
+    expect(report.rows.find((r) => r.cashier.name === "Amaka Obi")).toMatchObject({ count: 1, netDifference: 500 });
+  });
+  it("refuses: the cashier who made the sale, a cashier, a different kind of item, a wrong settlement, and fixing more than was sold", async () => {
+    const manager = await as("u-manager", "2222");
+    const { cashier, saleKey } = await soldAsClear();
+    expect((await fix(cashier, saleKey)).status).toBe(403); // no permission
+    expect((await fix(manager, saleKey, { rightProductId: "p2" })).status).toBe(400); // not the same family
+    expect((await fix(manager, saleKey, { settlement: "refunded" })).status).toBe(400); // the customer owes ₦500, nothing to pay back
+    expect((await fix(manager, saleKey, { qty: 2 })).status).toBe(400); // only 1 was sold
+    expect((await fix(manager, saleKey, { settlement: "shop_covers" })).status).toBe(200);
+    expect((await fix(manager, saleKey)).status).toBe(400); // already fixed
+  });
+});
+
+describe("credit partners: the partner is billed, and each account names who approves its credit", () => {
+  const uuid = () => crypto.randomUUID();
+  const as = async (userId: string, pin: string) => ({ authorization: `Bearer ${LoginResponse.parse(await (await post("/api/login", { userId, pin })).json()).token}` });
+  const balanceOf = async (h: Record<string, string>, name: string) =>
+    CustomersResponse.parse(await (await fetch(`${base}/api/customers?q=${encodeURIComponent(name)}`, { headers: h })).json()).customers.find((c) => c.name === name)!;
+  const open = async () => {
+    const cashier = await as("u-cashier", "1111");
+    const shiftId = uuid();
+    await post("/api/shifts/open", { idempotencyKey: uuid(), shiftId, openedAt: new Date().toISOString(), openingFloat: 20000 }, cashier);
+    return { cashier, shiftId };
+  };
+  const sell = (h: Record<string, string>, shiftId: string, body: Record<string, unknown>) =>
+    post("/api/sales", { idempotencyKey: uuid(), clientCreatedAt: new Date().toISOString(), shiftId, lines: [{ productId: "p3", name: "Bluetooth earbuds", unitPrice: 18500, qty: 1 }], subtotal: 18500, vatMode: "inclusive", vat: Math.round((18500 * 0.075) / 1.075), total: 18500, payments: [{ method: "credit", amount: 18500 }], ...body }, h);
+
+  it("bills the partner, not the buyer, and uses the partner's limit", async () => {
+    const { cashier, shiftId } = await open();
+    const buyer = await balanceOf(cashier, "Ade Stores");
+    const partner = await balanceOf(cashier, "Quick Lend Finance");
+    expect(partner).toMatchObject({ kind: "partner", approverRoles: ["Credit controller"] });
+    const res = await sell(cashier, shiftId, { customerId: "c1", billToId: "cp2" });
+    expect(res.status).toBe(200);
+    expect((await balanceOf(cashier, "Quick Lend Finance")).balance).toBe((partner.balance ?? 0) + 18500);
+    expect((await balanceOf(cashier, "Ade Stores")).balance).toBe(buyer.balance); // the buyer owes nothing for this
+  });
+  it("only a partner can be billed in place of the customer, and a partner over its limit is stopped", async () => {
+    const { cashier, shiftId } = await open();
+    expect((await sell(cashier, shiftId, { customerId: "c1", billToId: "c2" })).status).toBe(400); // Bola Ventures is a customer, not a partner
+    const stopped = await sell(cashier, shiftId, { billToId: "cp1" }); // Credit Direct: 1,900,000 of 2,000,000 used; add 18,500 fits...
+    expect(stopped.status).toBe(200);
+    const big = await sell(cashier, shiftId, { billToId: "cp1", lines: [{ productId: "p3", name: "Bluetooth earbuds", unitPrice: 18500, qty: 6 }], subtotal: 111000, vat: Math.round((111000 * 0.075) / 1.075), total: 111000, payments: [{ method: "credit", amount: 111000 }] });
+    expect(big.status).toBe(400); // would go over the partner's limit: needs approval
+    expect(((await big.json()) as { message: string }).message).toContain("credit limit");
+  });
+  it("credit over a partner's limit is approved by the people that account names (the Credit controller), not the general route", async () => {
+    const { cashier } = await open();
+    const manager = await as("u-manager", "2222");
+    const creditCtl = await as("u-cashctl", "9999"); // role: Cash controller, not the Credit controller
+    const raised = await post("/api/approvals", { idempotencyKey: uuid(), kind: "credit_over_limit", customerId: "cp2", amount: 1_500_000, unit: "naira", requestNote: "Large order" }, cashier);
+    const ap = ((await raised.json()) as { approval: { id: string; steps?: Array<{ roles: string[] }> } }).approval;
+    expect(ap.steps).toEqual([expect.objectContaining({ roles: ["Credit controller"] })]);
+    const decide = (h: Record<string, string>) => post(`/api/approvals/${ap.id}/decision`, { idempotencyKey: uuid(), decision: "approve" }, h);
+    expect((await decide(manager)).status).toBe(403); // a manager is not named by this account
+    expect((await decide(creditCtl)).status).toBe(403); // nor is the Cash controller
+    const named = await as("u-creditctl", "4004");
+    const ok = await decide(named); // the Credit controller is named by this account
+    expect(ok.status).toBe(200);
+    expect(((await ok.json()) as { approval: { status: string } }).approval.status).toBe("approved");
   });
 });

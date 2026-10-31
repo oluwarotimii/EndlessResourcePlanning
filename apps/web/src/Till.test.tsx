@@ -60,7 +60,7 @@ function fakeServer() {
     dispatchTransfer: async () => { throw new Error("not used"); },
     receiveTransfer: async () => { throw new Error("not used"); },
     purchaseOrders: async () => { throw new Error("not used"); },
-    receiveGoods: async () => { throw new Error("not used"); },
+    raisePurchaseOrder: async () => { throw new Error("not used"); }, receiveGoods: async () => { throw new Error("not used"); },
     stockLevels: async () => { throw new Error("not used"); },
     countSheet: async () => { throw new Error("not used"); }, counts: async () => { throw new Error("not used"); }, submitCount: async () => { throw new Error("not used"); }, deliveryOrders: async () => { throw new Error("not used"); }, riders: async () => { throw new Error("not used"); }, assignDelivery: async () => { throw new Error("not used"); }, proveDelivery: async () => { throw new Error("not used"); }, remitCash: async () => { throw new Error("not used"); }, codOutstanding: async () => { throw new Error("not used"); }, requestWriteOff: async () => { throw new Error("not used"); }, inTransitReport: async () => { throw new Error("not used"); },
     approvals: async () => ({ approvals: approvals.map((a) => ({ ...a })) }),

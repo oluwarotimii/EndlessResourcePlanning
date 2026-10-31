@@ -1,0 +1,4 @@
+{
+ "_note": "Screens built earlier than the Screen-Inventory spreadsheet planned. Merged over the spreadsheet by tools/gen-fixtures.py; see docs/DECISIONS.md.",
+ "R01": "MVP"
+}

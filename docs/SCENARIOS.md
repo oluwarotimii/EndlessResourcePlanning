@@ -226,7 +226,22 @@ Stories 1 to 12 and 14: use my suggestions as placeholders; reason lists must be
 **My suggestion:** partners are accounts like customers, with a limit and a named approver; the Credit control officer approves over-limit sales; rejected claims go back to the customer as a normal debt after a manager decides.
 **Your answer:** ______________________
 
-## 18. Where each question lives
+## 18. The customer pays on their phone, then walks out with one more item
+**Story.** In the cashierless store, Ada scans three items herself: a ₦6,500 charger, a ₦2,500 cable and a ₦3,000 phone case. She pays ₦12,000 on her phone and the receipt prints. At the door she also carries a ₦1,500 screen protector she did not scan.
+
+**Without a rule:** nothing catches it. The system says the screen protector is still on the shelf. At the next stock count it is one short and looks like theft, and across a month the shop loses ₦1,500 many times over.
+
+**What we plan:** an **exit check**. The floor person scans the QR on Ada's receipt and sees the three items. They look in the bag, find four, and flag a mismatch. The extra item is added to the sale and Ada pays ₦1,500 on the spot, or puts it back.
+
+**Questions**
+- a) Do you check every customer, or a sample (for example one in five)?
+- b) If a customer has already left with an unpaid item, who covers it?
+- c) Does a repeat customer get a warning, or are they asked to pay and nothing more?
+
+**My suggestion:** check everyone at first, then a sample once the numbers settle; the shop covers a first-time honest mistake; repeats are reported to the manager.
+**Your answer:** ______________________
+
+## 19. Where each question lives
 | Story | Section in `docs/DECISIONS.md` | Where it will matter in the app |
 | --- | --- | --- |
 | 1, 2, 3 | Closing balance and cash-up questions; decisions 13 to 16 | Closing balance count and approval |
@@ -241,3 +256,4 @@ Stories 1 to 12 and 14: use my suggestions as placeholders; reason lists must be
 | 14 | Delivery (new) | Dispatch board, rider screens |
 | 16 | Decisions 40, 41 | Customer return (not built) |
 | 17 | Decisions 42, 43 | Till, approvals (not built) |
+| 18 | `docs/CASHIERLESS-ALIGNMENT.md` | Exit check (not built) |

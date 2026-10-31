@@ -82,6 +82,10 @@ export const Customer = z.object({
   creditLimit: Naira.optional(),
   /** Amount the customer already owes. */
   balance: Naira.optional(),
+  /** A credit partner (for example a lender) is billed instead of the buyer. Absent means an ordinary customer. */
+  kind: z.enum(["customer", "partner"]).optional(),
+  /** Who approves credit over this account's limit. Each account can name its own (for example the Credit controller). */
+  approverRoles: z.array(z.string()).optional(),
 });
 export type Customer = z.infer<typeof Customer>;
 export const CustomersResponse = z.object({ customers: z.array(Customer) });
@@ -124,6 +128,8 @@ export const SaleInput = z.object({
   clientCreatedAt: z.string(),
   shiftId: Id,
   customerId: z.string().optional(),
+  /** Bill the credit part of this sale to a credit partner instead of the customer. The partner's limit and balance are used. */
+  billToId: z.string().optional(),
   /** An approved discount may be applied once. The server checks the approval and recomputes the totals. */
   discountApprovalId: z.string().min(1).optional(),
   /** An approved credit_over_limit request for this customer and at least this much credit. */
@@ -421,8 +427,68 @@ export const ReturnRecord = ReturnInput.extend({
   refundPaid: Naira,
   cashier: z.object({ id: z.string(), name: z.string() }),
   postedAt: z.string(),
+  /** True when the reason is one of `returns.rules.faultyReasons`. A faulty item waits in a check area for an inspector. */
+  faulty: z.boolean().optional(),
+  /** Where the returned goods are. Absent for a change-of-mind return, which goes straight back on the shelf. */
+  inspection: z.object({
+    status: z.enum(["pending", "restocked", "rma"]),
+    by: z.object({ id: z.string(), name: z.string() }).optional(),
+    at: z.string().optional(),
+    note: z.string().optional(),
+  }).optional(),
 });
 export type ReturnRecord = z.infer<typeof ReturnRecord>;
+/* ───────────── Fixing a wrong-variant sale (Scenario 13) ───────────── */
+
+/**
+ * A Black case was sold as Clear. A manager fixes it: the stock of both is corrected, the price difference is settled
+ * (collected from the customer, paid back, or covered by the shop) and the reason and the people are recorded.
+ * The sale document itself is not rewritten here; in ERPNext that is a credit note and a new invoice (docs/ERPNEXT-MAPPING.md).
+ */
+export const MixupSettlement = z.enum(["collected", "refunded", "shop_covers"]);
+export type MixupSettlement = z.infer<typeof MixupSettlement>;
+export const MixupCorrectionInput = z.object({
+  idempotencyKey: Id,
+  saleKey: z.string().min(8),
+  /** What the till said was sold. */
+  wrongProductId: z.string(),
+  /** What the customer really took. */
+  rightProductId: z.string(),
+  qty: z.number().int().positive(),
+  settlement: MixupSettlement,
+  note: z.string().trim().min(2).max(300),
+});
+export type MixupCorrectionInput = z.infer<typeof MixupCorrectionInput>;
+export const MixupCorrection = MixupCorrectionInput.extend({
+  id: z.string(),
+  invoiceNo: z.string(),
+  wrongName: z.string(),
+  rightName: z.string(),
+  /** Price of what was really taken minus the price charged, times quantity. Positive: the customer owed more. */
+  difference: z.number().int(),
+  soldBy: z.object({ id: z.string(), name: z.string() }),
+  fixedBy: z.object({ id: z.string(), name: z.string() }),
+  fixedAt: z.string(),
+});
+export type MixupCorrection = z.infer<typeof MixupCorrection>;
+export const MixupCorrectionResponse = z.object({ correction: MixupCorrection, duplicate: z.boolean() });
+export type MixupCorrectionResponse = z.infer<typeof MixupCorrectionResponse>;
+/** Mix-ups by the person who made the sale, to coach staff and to spot a pattern. */
+export const MixupReport = z.object({
+  rows: z.array(z.object({ cashier: z.object({ id: z.string(), name: z.string() }), count: z.number().int(), units: z.number().int(), netDifference: z.number().int() })),
+  corrections: z.array(MixupCorrection),
+});
+export type MixupReport = z.infer<typeof MixupReport>;
+
+/** An inspector decides what happens to a faulty return: back on the shelf, or sent back to the supplier (RMA). */
+export const InspectReturnInput = z.object({
+  idempotencyKey: Id,
+  outcome: z.enum(["restock", "rma"]),
+  note: z.string().trim().max(300).optional(),
+});
+export type InspectReturnInput = z.infer<typeof InspectReturnInput>;
+export const ReturnInspectionsResponse = z.object({ returns: z.array(ReturnRecord) });
+export type ReturnInspectionsResponse = z.infer<typeof ReturnInspectionsResponse>;
 export const ReturnResponse = z.object({ ret: ReturnRecord, duplicate: z.boolean() });
 export type ReturnResponse = z.infer<typeof ReturnResponse>;
 
@@ -449,6 +515,8 @@ export const StockRequest = z.object({
   requestedAt: z.string(),
   /** Set when this is a request to a sister branch rather than the warehouse. */
   fromBranch: z.string().optional(),
+  /** The branch that asked, and so the branch whose people must sign for the goods when they arrive. */
+  toBranch: z.string().optional(),
 });
 export type StockRequest = z.infer<typeof StockRequest>;
 export const StockRequestsResponse = z.object({ requests: z.array(StockRequest) });
@@ -475,6 +543,8 @@ export const Transfer = z.object({
   receiveNote: z.string().optional(),
   /** Set when this transfer was sent by a sister branch rather than the warehouse. */
   fromBranch: z.string().optional(),
+  /** The branch the goods are going to. Only that branch's stock officer or manager can sign for them. */
+  toBranch: z.string().optional(),
 });
 export type Transfer = z.infer<typeof Transfer>;
 export const TransfersResponse = z.object({ transfers: z.array(Transfer) });
@@ -590,7 +660,7 @@ export type PurchaseOrderLine = z.infer<typeof PurchaseOrderLine>;
 export const PurchaseOrderStatus = z.enum(["open", "partially_received", "received"]);
 export type PurchaseOrderStatus = z.infer<typeof PurchaseOrderStatus>;
 
-/** Raising and approving a purchase order is a later screen (R01); orders arrive here already open, from a supplier. */
+/** A purchase order is raised on R01 by anyone holding the Procurement permission, and received on H01. */
 export const PurchaseOrder = z.object({
   id: z.string(),
   supplierName: z.string(),
@@ -599,8 +669,21 @@ export const PurchaseOrder = z.object({
   status: PurchaseOrderStatus,
   lines: z.array(PurchaseOrderLine),
   createdAt: z.string(),
+  /** Who raised it. Absent for orders that arrived from outside the app. */
+  raisedBy: z.object({ id: z.string(), name: z.string() }).optional(),
 });
 export type PurchaseOrder = z.infer<typeof PurchaseOrder>;
+/**
+ * Raise a purchase order (R01). Who may is a permission (the Procurement area), given to a role or to named people;
+ * it is not tied to a job title. Safe to retry (idempotency key).
+ */
+export const CreatePurchaseOrderInput = z.object({
+  idempotencyKey: Id,
+  supplierName: z.string().trim().min(2).max(120),
+  reference: z.string().trim().max(60).optional(),
+  lines: z.array(z.object({ productId: z.string(), qty: z.number().int().positive() })).min(1),
+});
+export type CreatePurchaseOrderInput = z.infer<typeof CreatePurchaseOrderInput>;
 export const PurchaseOrdersResponse = z.object({ purchaseOrders: z.array(PurchaseOrder) });
 export type PurchaseOrdersResponse = z.infer<typeof PurchaseOrdersResponse>;
 export const PurchaseOrderResponse = z.object({ purchaseOrder: PurchaseOrder, duplicate: z.boolean() });

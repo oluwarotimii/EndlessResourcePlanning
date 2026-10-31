@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Capabilities } from "@erp/api-contract";
 import { AREAS, ROLE_MATRIX, SCREENS, approvalArea, approvalThreshold, areasForRoles, buildNavigation, mayDecideApproval, withinApprovalLimit } from "./index";
 
-const PILOT = ["Cashier", "Branch manager", "Warehouse officer", "Stock controller", "Rider / courier", "Delivery coordinator"];
+const PILOT = ["Cashier", "Branch manager", "Warehouse officer", "Stock controller", "Rider / courier", "Delivery coordinator", "Procurement officer"];
 const TASK_ROLES = ["Cashier", "Rider / courier", "Technician"];
 
 const caps = (role: string): Capabilities => ({
@@ -14,11 +14,11 @@ const ap = (kind: Kind, requester: string, amount = 1, extra: Record<string, unk
 const nav = (role: string) => buildNavigation({ caps: caps(role), taskRoles: TASK_ROLES, enabledScopes: ["MVP"] });
 
 describe("generated fixtures", () => {
-  it("match the planning documents: 20 roles, 24 areas, 93 screens, 29 MVP", () => {
+  it("match the planning documents: 20 roles, 24 areas, 93 screens, 29 MVP in the spreadsheet plus R01 promoted by scope-overrides.json", () => {
     expect(Object.keys(ROLE_MATRIX)).toHaveLength(20);
     expect(AREAS).toHaveLength(24);
     expect(SCREENS).toHaveLength(93);
-    expect(SCREENS.filter((s) => s.scope === "MVP")).toHaveLength(29);
+    expect(SCREENS.filter((s) => s.scope === "MVP")).toHaveLength(30);
   });
   it("every MVP screen is reachable by at least one pilot role", () => {
     const seen = new Set(PILOT.flatMap((r) => nav(r).visible.map((s) => s.id)));

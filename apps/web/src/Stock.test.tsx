@@ -61,7 +61,7 @@ function fakeServer(who: Capabilities) {
     },
     stockLevels: async (_t, q = "") => { down(); s.levelQueries.push(q); return { asOf: "now", levels: s.levels.filter((l) => l.name.toLowerCase().includes(q.toLowerCase())) }; },
     purchaseOrders: async () => { down(); return { purchaseOrders: s.purchaseOrders }; },
-    receiveGoods: async (_t, id, input) => {
+    raisePurchaseOrder: async () => { throw new Error("not used"); }, receiveGoods: async (_t, id, input) => {
       down(); s.goodsReceived.push({ id, input });
       const po = s.purchaseOrders.find((x) => x.id === id)!;
       const newLines = po.lines.map((l) => ({ ...l, qtyReceived: l.qtyReceived + (input.lines.find((x) => x.productId === l.productId)?.qty ?? 0) }));

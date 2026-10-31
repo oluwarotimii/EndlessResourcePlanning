@@ -59,6 +59,12 @@ if titles_path.exists():
     overrides = {k: v for k, v in json.loads(titles_path.read_text()).items() if not k.startswith("_")}
     for sc in screens:
         sc["title"] = overrides.get(sc["id"], sc["title"])
+# Screens the owner chose to build earlier than the spreadsheet planned (docs/DECISIONS.md). The spreadsheet is never edited.
+scope_path = out / "scope-overrides.json"
+if scope_path.exists():
+    scopes = {k: v for k, v in json.loads(scope_path.read_text()).items() if not k.startswith("_")}
+    for sc in screens:
+        sc["scope"] = scopes.get(sc["id"], sc["scope"])
 (out / "screens.json").write_text(json.dumps(screens, indent=1))
 print(len(areas), "areas;", len(matrix), "roles;", len(limits), "limits;", len(screens), "screens;",
       sum(s["scope"] == "MVP" for s in screens), "MVP")

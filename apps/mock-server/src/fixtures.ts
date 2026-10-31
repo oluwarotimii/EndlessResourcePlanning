@@ -1,6 +1,10 @@
 import type { Task } from "@erp/api-contract";
 
-export interface MockUser { id: string; name: string; role: string; pin: string; branch: string; warehouse?: string }
+/**
+ * `extraRoles` is how a permission is given to one person: Zainab is a Sales rep who was also given the
+ * Procurement officer role, so she can raise purchase orders. In ERPNext this is simply a second role on the User.
+ */
+export interface MockUser { id: string; name: string; role: string; pin: string; branch: string; warehouse?: string; extraRoles?: string[] }
 
 /** Demo people for the six pilot roles. PINs are fixtures, not secrets. */
 export const USERS: MockUser[] = [
@@ -17,6 +21,26 @@ export const USERS: MockUser[] = [
   { id: "u-rider2", name: "Femi Adewale", role: "Rider / courier", pin: "1212", branch: "Pilot Branch" },
   // A sister branch, so a stock request can be made of another branch, not only the warehouse.
   { id: "u-warehouse2", name: "Bayo Fashola", role: "Warehouse officer", pin: "3334", branch: "Victoria Island Branch" },
+  { id: "u-creditctl", name: "Yetunde Bakare", role: "Credit controller", pin: "4004", branch: "Pilot Branch" },
+  // Procurement is a permission, not a job: one person holds it as their only role, another was given it on top of Sales rep.
+  { id: "u-proc", name: "Gbenga Olatunji", role: "Procurement officer", pin: "4001", branch: "Pilot Branch" },
+  { id: "u-rep", name: "Zainab Idris", role: "Sales rep", pin: "4002", branch: "Pilot Branch", extraRoles: ["Procurement officer"] },
+  { id: "u-rep2", name: "Obinna Eke", role: "Sales rep", pin: "4003", branch: "Pilot Branch" },
+  // Made-up branches, each with a manager and a stock officer, so a transfer can be signed off at both ends.
+  // All of this is demo data and goes when the real branches come from ERPNext.
+  { id: "u-mgr-vi", name: "Chinedu Okoro", role: "Branch manager", pin: "3335", branch: "Victoria Island Branch" },
+  { id: "u-mgr-ikeja", name: "Funke Adebisi", role: "Branch manager", pin: "3401", branch: "Ikeja Branch" },
+  { id: "u-stk-ikeja", name: "Emeka Nwachukwu", role: "Warehouse officer", pin: "3402", branch: "Ikeja Branch" },
+  { id: "u-mgr-lekki", name: "Seun Ogunleye", role: "Branch manager", pin: "3411", branch: "Lekki Branch" },
+  { id: "u-stk-lekki", name: "Halima Sani", role: "Warehouse officer", pin: "3412", branch: "Lekki Branch" },
+  { id: "u-mgr-yaba", name: "Tobi Fashina", role: "Branch manager", pin: "3421", branch: "Yaba Branch" },
+  { id: "u-stk-yaba", name: "Ijeoma Eze", role: "Warehouse officer", pin: "3422", branch: "Yaba Branch" },
+  { id: "u-mgr-surulere", name: "Kayode Alabi", role: "Branch manager", pin: "3431", branch: "Surulere Branch" },
+  { id: "u-stk-surulere", name: "Nneka Obiora", role: "Warehouse officer", pin: "3432", branch: "Surulere Branch" },
+  { id: "u-mgr-ajah", name: "Rasheed Lawal", role: "Branch manager", pin: "3441", branch: "Ajah Branch" },
+  { id: "u-stk-ajah", name: "Blessing Udo", role: "Warehouse officer", pin: "3442", branch: "Ajah Branch" },
+  { id: "u-mgr-ikorodu", name: "Mariam Yusuf", role: "Branch manager", pin: "3451", branch: "Ikorodu Branch" },
+  { id: "u-stk-ikorodu", name: "Dapo Salami", role: "Warehouse officer", pin: "3452", branch: "Ikorodu Branch" },
 ];
 
 export const TASKS: Record<string, Task[]> = {
@@ -100,6 +124,9 @@ export const CUSTOMERS: Customer[] = [
   { id: "c1", name: "Ade Stores", phone: "0803 000 0001", creditLimit: 200000, balance: 50000 },
   { id: "c2", name: "Bola Ventures", phone: "0803 000 0002", creditLimit: 100000, balance: 95000 },
   { id: "c3", name: "Chioma Okeke", phone: "0803 000 0003" }, // no credit terms: cash customer only
+  // Credit partners are billed instead of the buyer. Made-up names; each account names its own approver.
+  { id: "cp1", name: "Credit Direct", kind: "partner", creditLimit: 2000000, balance: 1900000, approverRoles: ["Credit controller", "MD / Executive"] },
+  { id: "cp2", name: "Quick Lend Finance", kind: "partner", creditLimit: 1000000, balance: 0, approverRoles: ["Credit controller"] },
 ];
 
 /**
@@ -111,6 +138,12 @@ export const COST_PRICE: Record<string, number> = Object.fromEntries(PRODUCTS.ma
 /** Stock held by sister branches, who may dispatch a stock request the same way the warehouse does. */
 export const BRANCH_STOCK: Record<string, Record<string, number>> = {
   "Victoria Island Branch": { p1: 10, p3: 15, p7: 8 },
+  "Ikeja Branch": { p1: 25, p2: 60, p3: 12, p6: 30, p13: 20 },
+  "Lekki Branch": { p1: 18, p4: 9, p7: 5, p10: 14, p14: 11 },
+  "Yaba Branch": { p2: 45, p5: 90, p8: 30, p9: 40, p11: 10 },
+  "Surulere Branch": { p1: 6, p3: 20, p12: 15, p13: 25, p14: 8 },
+  "Ajah Branch": { p2: 30, p4: 12, p6: 22, p10: 7, p11: 9 },
+  "Ikorodu Branch": { p1: 14, p5: 70, p8: 16, p9: 25, p12: 10 },
 };
 
 /**

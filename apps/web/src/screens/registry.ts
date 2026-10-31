@@ -11,6 +11,7 @@ export const BUILT: Record<string, LazyExoticComponent<ComponentType>> = {
   Q01: lazy(() => import("./CashUpPage").then((m) => ({ default: m.CashUpPage }))),
   Q02: lazy(() => import("./CashUpSignOffPage").then((m) => ({ default: m.CashUpSignOffPage }))),
   T01: lazy(() => import("./ReturnsPage").then((m) => ({ default: m.ReturnsPage }))),
+  R01: lazy(() => import("./PurchaseOrdersPage").then((m) => ({ default: m.PurchaseOrdersPage }))),
   H01: lazy(() => import("./GoodsReceiptPage").then((m) => ({ default: m.GoodsReceiptPage }))),
   H02: lazy(() => import("./StockRequestPage").then((m) => ({ default: m.StockRequestPage }))),
   H03: lazy(() => import("./DispatchPage").then((m) => ({ default: m.DispatchPage }))),
