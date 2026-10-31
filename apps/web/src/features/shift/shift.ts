@@ -19,6 +19,10 @@ export interface LocalSale {
   vatMode: VatMode;
   vat: number;
   total: number;
+  /** Whole naira taken off the gross subtotal by an approved discount. */
+  discount?: number;
+  discountPercent?: number;
+  discountApprovalId?: string;
   payments: Payment[];
   customerName?: string;
   cashierName: string;

@@ -57,6 +57,12 @@ export function SaleDocument({ doc }: { doc: PrintDoc }) {
         {doc.vatMode === "exclusive" && (
           <div className="flex justify-between"><dt className="text-text-muted">{t("doc.subtotal")}</dt><dd className="tabular">{money(doc.subtotal)}</dd></div>
         )}
+        {doc.discount !== undefined && doc.discount > 0 && (
+          <div className="flex justify-between">
+            <dt className="text-text-muted">{t("doc.discount", { rate: String(doc.discountPercent ?? 0) })}</dt>
+            <dd className="tabular">-{money(doc.discount)}</dd>
+          </div>
+        )}
         {doc.vatMode !== "none" && (
           <div className="flex justify-between">
             <dt className="text-text-muted">{t(doc.vatMode === "exclusive" ? "doc.vatAdded" : "doc.vatIncluded", { rate: String(+(tenant.tax.vatRate * 100).toFixed(2)) })}</dt>

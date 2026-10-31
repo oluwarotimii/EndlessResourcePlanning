@@ -6,10 +6,12 @@ export interface Cart {
   customer?: Pick<Customer, "id" | "name" | "creditLimit" | "balance">;
   /** Set when charging starts so a crash and retry reuses the same idempotency key. Cleared on any edit. */
   chargeKey?: string;
+  /** An approved discount for this sale. Any change to the lines clears it; a new request is needed. */
+  discount?: { approvalId: string; percent: number };
 }
 export const emptyCart = (): Cart => ({ lines: [] });
 
-const edit = (cart: Cart, lines: CartLine[]): Cart => ({ ...cart, lines, chargeKey: undefined });
+const edit = (cart: Cart, lines: CartLine[]): Cart => ({ ...cart, lines, chargeKey: undefined, discount: undefined });
 
 export function addProduct(cart: Cart, p: Pick<Product, "id" | "name" | "price">, qty = 1): Cart {
   const found = cart.lines.find((l) => l.productId === p.id);

@@ -10,6 +10,9 @@ export interface PrintDoc {
   customer?: string;
   lines: Array<{ name: string; unitPrice: number; qty: number }>;
   subtotal: number;
+  /** Whole naira taken off the subtotal by an approved discount. */
+  discount?: number;
+  discountPercent?: number;
   vatMode: VatMode;
   vat: number;
   total: number;

@@ -14,11 +14,11 @@ Current state only. When a decision changes, edit it here and add a line to `doc
 9. **Payment is only recorded for now.** Transfer and card are recorded at the till. Live confirmation arrives with Paystack (Sprint 9), so the "confirmation within 10 seconds" target cannot be tested yet.
 10. **Failed money items are never discarded** by the cashier. The resolution workflow is a Sprint 3 question.
 11. **Own contract, not raw ERPNext records.** The ERPNext adapter (Sprint 5) maps to our contract.
-12. **Approvals are an online, deliberate decision.** The inbox shows the requester, the exception, the amount, the limit and the customer; approval needs a hold-to-confirm, rejection needs a reason. Every decision carries an idempotency key, the creator can never decide their own request, and the server checks the approve letter on the relevant area (`Stores (POS)` for discounts, `Returns` for voids, `Credit sales` for over-limit credit). Approvals are blocked offline. Limits are read from configuration, not from code.
+12. **Approvals are an online, deliberate decision.** The inbox shows the requester, the exception, the amount, the limit and the customer; approval needs a hold-to-confirm, rejection needs a reason. Every decision carries an idempotency key, the creator can never decide their own request, and the server checks the approve letter on the relevant area (`Stores (POS)` for discounts, `Returns` for voids, `Credit sales` for over-limit credit). Approvals are blocked offline. Limits are read from configuration, not from code. A cashier raises a discount or void request from the till (S05); nothing changes there until it is approved. An approved discount applies to the gross subtotal before VAT, exactly once, and any cart edit clears it. An approved void clears the cart.
 
 ## Open questions for the business
 - **VAT:** which `tax.mode`, what rate, and who confirms it (accountant)? Are some items VAT-exempt (not supported yet; the mode applies to the whole sale)?
-- **Credit:** real credit limits per customer and who sets them; whether the cashier or the manager may sell on credit; whether credit needs a deposit. The approvals inbox can now receive an over-limit request; raising it from the till is the next Sprint 3 increment.
+- **Credit:** real credit limits per customer and who sets them; whether the cashier or the manager may sell on credit; whether credit needs a deposit. The approvals inbox can now receive an over-limit request; raising it from the till (CR01) is the next Sprint 3 increment.
 - **Offline prices:** a sale made offline uses the price the till last saw. If the real price changed meanwhile, accept or send to a manager? The mock accepts the till's price.
 - **Offline sign-in:** signing in needs a connection (the PIN is checked by the server). A cashier already signed in keeps working offline, including after a reload. Do tills need to sign in offline (for example after a power cut)? That needs a locally stored PIN check and a security decision.
 - Cash-up variance **reason codes** (requirements, open question 6) are not captured; shift close shows the variance only.
@@ -33,7 +33,7 @@ Current state only. When a decision changes, edit it here and add a line to `doc
 3. **Screen counts.** The Screens sheet has 97 rows but the Summary says 93. The build uses the 93 actual screens.
 
 ## Known gaps
-- The approvals inbox is built, but the till and returns screens do not raise requests yet; the mock seeds them. S05 and the manager-approval half of CR01 are next.
+- The approvals inbox and the S05 discount/void request from the till are built. The returns screen does not raise requests yet, and the manager-approval half of CR01 (over-limit credit from the till) is next.
 - Camera barcode scanning is not built; keyboard-wedge scanners work.
 - Silent printing is documented but not verified on real hardware.
 - The e2e test is a script, not yet in CI (CI has no browser installed).

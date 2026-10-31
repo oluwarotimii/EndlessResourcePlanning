@@ -8,5 +8,5 @@
   "S03": "Open and close shift with float, expected cash (cash payments only) and variance. Variance reason codes not captured (waiting for business decision).",
   "S04": "Search with credit terms and available credit; works from this device's remembered customers when offline.",
   "CR01": "Pulled forward from Sprint 3 and partly built inside the till: credit needs a customer with terms and room under the limit (checked on the device and again by the server). Over-limit approval by a manager is NOT built (Sprint 3, depends on the approvals inbox).",
-  "A01": "Approvals inbox: shows who, what, amount and limit; hold-to-confirm approve; reject with a required reason; creator never decides their own request; blocked offline. Mock seeds requests; raising them from S05 and CR01 is the next Sprint 3 increment."
+  "A01": "Approvals inbox: shows who, what, amount and limit; hold-to-confirm approve; reject with a required reason; creator never decides their own request; blocked offline. S05 raises discount and void requests from the till; the over-limit credit request (CR01) is next."
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Capabilities } from "@erp/api-contract";
-import { AREAS, ROLE_MATRIX, SCREENS, approvalArea, areasForRoles, buildNavigation, mayDecideApproval } from "./index";
+import { AREAS, ROLE_MATRIX, SCREENS, approvalArea, approvalThreshold, areasForRoles, buildNavigation, mayDecideApproval, withinApprovalLimit } from "./index";
 
 const PILOT = ["Cashier", "Branch manager", "Warehouse officer", "Stock controller", "Rider / courier", "Delivery coordinator"];
 const TASK_ROLES = ["Cashier", "Rider / courier", "Technician"];
@@ -71,5 +71,21 @@ describe("who may decide an approval", () => {
 
   it("never lets the creator approve their own request", () => {
     expect(mayDecideApproval(caps("Branch manager"), "discount", "u")).toBe(false);
+  });
+
+  it("reads the approver limit from the approval-limits table", () => {
+    expect(approvalThreshold("discount")).toEqual({ limit: 3, unit: "percent" });
+    expect(approvalThreshold("void")).toEqual({ limit: 50000, unit: "naira" });
+  });
+
+  it("refuses an approval above the approver's own limit", () => {
+    expect(withinApprovalLimit("Branch manager", "discount", 2)).toBe(true);
+    expect(withinApprovalLimit("Branch manager", "discount", 5)).toBe(false);
+    expect(withinApprovalLimit("Branch manager", "void", 50000)).toBe(true);
+    expect(withinApprovalLimit("Branch manager", "void", 50001)).toBe(false);
+    expect(withinApprovalLimit("Branch manager", "credit_over_limit", 999999)).toBe(true);
+    expect(withinApprovalLimit("MD / Executive", "discount", 99)).toBe(true);
+    expect(mayDecideApproval(caps("Branch manager"), "discount", "u-cashier", 5)).toBe(false);
+    expect(mayDecideApproval(caps("Branch manager"), "discount", "u-cashier", 2)).toBe(true);
   });
 });

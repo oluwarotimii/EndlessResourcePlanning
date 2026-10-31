@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Capabilities, SaleInput } from "@erp/api-contract";
+import type { Approval, Capabilities, SaleInput } from "@erp/api-contract";
 import { areasForRoles } from "@erp/permissions";
 import { createMemoryStorage, type Storage } from "@erp/offline";
 import { loadTenant } from "@erp/tenant-config";
@@ -21,7 +21,8 @@ const PRODUCTS = [
 /** A tiny fake server that is idempotent, like the real one must be. */
 function fakeServer() {
   const sales = new Map<string, SaleInput>();
-  const s = { down: false, createCalls: [] as string[], opened: [] as string[], closed: [] as number[], printLogs: 0, sales };
+  const approvals: Approval[] = [];
+  const s = { down: false, createCalls: [] as string[], opened: [] as string[], closed: [] as number[], printLogs: 0, sales, approvals };
   const api: ApiClient = {
     users: async () => ({ deviceBranch: "Pilot Branch", users: [] }),
     login: async () => { throw new Error("unused"); },
@@ -44,7 +45,16 @@ function fakeServer() {
     openShift: async (_t, i) => { if (s.down) throw new ApiFailure("unavailable", "unavailable"); s.opened.push(i.shiftId); return { duplicate: false, shift: { id: i.shiftId, status: "open", openingFloat: i.openingFloat, openedAt: i.openedAt } }; },
     closeShift: async (_t, i) => { s.closed.push(i.countedCash); return { duplicate: false, shift: { id: i.shiftId, status: "closed", openingFloat: 0, openedAt: "x" } }; },
     logPrint: async () => { s.printLogs++; },
-    approvals: async () => ({ approvals: [] }),
+    approvals: async () => ({ approvals: approvals.map((a) => ({ ...a })) }),
+    createApproval: async (_t, input) => {
+      if (s.down) throw new ApiFailure("unavailable", "unavailable");
+      const approval: Approval = {
+        id: `AP-${String(approvals.length + 1).padStart(4, "0")}`, kind: input.kind, status: "pending",
+        amount: input.amount, limit: 3, unit: input.unit, requestedBy: CASHIER.user, requestedAt: "now", requestNote: input.requestNote,
+      };
+      approvals.push(approval);
+      return { approval: { ...approval }, duplicate: false };
+    },
     decideApproval: async () => { throw new Error("not used"); },
   };
   return { api, s };
@@ -307,6 +317,44 @@ describe("payment methods, credit and split payments", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(/Credit needs a customer/);
     expect(screen.getByRole("button", { name: /confirm split payment/i })).toBeDisabled();
   });
+  it("a discount is applied only after a manager approves it, and the sale carries the approval", async () => {
+    const { s } = await ready();
+    fireEvent.click(screen.getByRole("button", { name: "Ask a manager" }));
+    expect(await screen.findByRole("heading", { name: "Ask a manager" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Ask for a discount" }));
+    fireEvent.change(screen.getByLabelText("Discount (%)"), { target: { value: "2" } });
+    expect(screen.getByText(/New total after discount: ₦12,740/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Send to manager" }));
+    expect(await screen.findByRole("heading", { name: "Waiting for a manager" })).toBeInTheDocument();
+    expect(screen.getByTestId("total")).toHaveTextContent(/13,000/); // nothing changes before approval
+
+    s.approvals[0]!.status = "approved";
+    fireEvent.click(screen.getByRole("button", { name: "Check again" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByTestId("total")).toHaveTextContent(/12,740/);
+    expect(screen.getByTestId("discount")).toHaveTextContent(/260/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cash" }));
+    await waitFor(() => expect(s.sales.size).toBe(1));
+    expect([...s.sales.values()][0]).toMatchObject({ subtotal: 13000, total: 12740, discountApprovalId: "AP-0001" });
+  });
+
+  it("a void clears the cart only after a manager approves it", async () => {
+    const { s } = await ready();
+    fireEvent.click(screen.getByRole("button", { name: "Ask a manager" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ask to void this sale" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send to manager" }));
+    expect(await screen.findByRole("heading", { name: "Waiting for a manager" })).toBeInTheDocument();
+    expect(screen.getByTestId("total")).toHaveTextContent(/13,000/);
+
+    s.approvals[0]!.status = "approved";
+    fireEvent.click(screen.getByRole("button", { name: "Check again" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(await screen.findByText("The sale was voided. The cart is empty.")).toBeInTheDocument();
+    expect(screen.getByTestId("total")).toHaveTextContent(/₦0/);
+    expect(s.sales.size).toBe(0);
+  });
+
   it("the receipt shows each payment and the balance on credit", async () => {
     await ready();
     await attach("Ade Stores");

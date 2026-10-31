@@ -34,6 +34,7 @@ const fakeApi: ApiClient = {
   closeShift: async () => { throw new Error("not used"); },
   logPrint: async () => undefined,
   approvals: async () => ({ approvals: [] }),
+  createApproval: async () => { throw new Error("not used"); },
   decideApproval: async () => { throw new Error("not used"); },
 };
 

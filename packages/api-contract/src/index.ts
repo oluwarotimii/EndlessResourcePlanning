@@ -122,6 +122,8 @@ export const SaleInput = z.object({
   clientCreatedAt: z.string(),
   shiftId: Id,
   customerId: z.string().optional(),
+  /** An approved discount may be applied once. The server checks the approval and recomputes the totals. */
+  discountApprovalId: z.string().min(1).optional(),
   lines: z.array(SaleLine).min(1),
   /** Sum of the lines. */
   subtotal: Naira,
@@ -214,3 +216,29 @@ export type ApprovalDecisionInput = z.infer<typeof ApprovalDecisionInput>;
 
 export const ApprovalResponse = z.object({ approval: Approval, duplicate: z.boolean() });
 export type ApprovalResponse = z.infer<typeof ApprovalResponse>;
+
+/** A cashier raises an exception; it lands in the inbox for someone else to decide. */
+export const CreateApprovalInput = z.object({
+  idempotencyKey: Id,
+  kind: ApprovalKind,
+  amount: z.number().int().nonnegative(),
+  unit: ApprovalUnit,
+  /** Required for credit_over_limit: the customer the sale is about. */
+  customerId: z.string().optional(),
+  /** Why the cashier is asking, shown on the approval card. */
+  requestNote: z.string().trim().max(300).optional(),
+}).superRefine((v, ctx) => {
+  if (v.kind === "discount" && (v.unit !== "percent" || v.amount < 1 || v.amount > 100)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A discount is a percentage from 1 to 100.", path: ["amount"] });
+  }
+  if (v.kind !== "discount" && (v.unit !== "naira" || v.amount < 1)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Enter a whole-naira amount.", path: ["amount"] });
+  }
+  if (v.kind === "credit_over_limit" && !v.customerId) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "A credit request needs a customer.", path: ["customerId"] });
+  }
+});
+export type CreateApprovalInput = z.infer<typeof CreateApprovalInput>;
+
+/** An approved discount is a percentage of the gross subtotal, rounded half up to whole naira. */
+export const discountAmount = (subtotal: number, percent: number) => Math.round((subtotal * percent) / 100);

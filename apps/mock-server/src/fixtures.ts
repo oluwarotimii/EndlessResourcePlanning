@@ -50,7 +50,7 @@ import type { Approval, Customer, Product } from "@erp/api-contract";
  */
 export const APPROVALS: Approval[] = [
   {
-    id: "AP-0001", kind: "discount", status: "pending", amount: 12, limit: 3, unit: "percent",
+    id: "AP-0001", kind: "discount", status: "pending", amount: 2, limit: 3, unit: "percent",
     requestedBy: { id: "u-cashier", name: "Amaka Obi" }, requestedAt: "2026-10-31T09:15:00.000Z",
     requestNote: "Box was already open on the shelf.",
   },

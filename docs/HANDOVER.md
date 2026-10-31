@@ -133,12 +133,13 @@ A change to behaviour, a setting, a rule or a decision is not done until these a
 - **Sprint 2:** offline queue, till, parked sales, shift open/close, customer lookup, sync tray, A5 printing, service worker, real-browser test.
 - **Sprint 2.1:** configurable VAT mode, configurable payment methods including credit and other, split and part-credit payments, credit limit checks, cash-up on cash payments only, customer cache for offline credit sales.
 - **Sprint 3, first increment:** approvals contract, permission mapping, mock endpoints, seeded requests, and the A01 inbox (hold-to-confirm, rejection reason, creator rule, offline block).
+- **Sprint 3, second increment:** S05 needs-manager request in the till (discount or void, optional reason, blocked offline), approved discount applied once before VAT, approved void clears the cart, approver limit enforced. The over-limit credit request (CR01) is next.
 Status of every screen: `docs/SCREEN-STATUS.md` (currently 7 of the 29 MVP screens built, 3 partly built).
 
 **Now: rest of Sprint 3, "Cash and approvals"** (30 Nov to 11 Dec per the plan; do it next regardless of dates)
 Screens from `Screen-Inventory.xlsx`: T01 customer return (receipt lookup, wizard), S05 needs-manager request (discount or void, a dialog, not a PIN), ~~A01 approvals inbox~~ (done), **A02 branch manager home**, Q01 cash-up count (wizard), Q02 cash-up sign-off (approval), G01 loss report (cash-up variance by branch and cashier), H02 branch stock request, and the **manager-approval half of CR01** (over-credit-limit).
 Suggested order and notes:
-1. **S05 and CR01 next.** The cashier raises a discount/void request (S05) and an over-limit credit request (CR01); both land in the A01 inbox and the cashier sees the result. The mock decides the over-limit sale only after an approval exists, so add `createApproval` to the contract and client, then wire the till.
+1. **CR01 next.** S05 is done (discount/void request from the till). Now the cashier raises an over-limit credit request from the till; it lands in A01 and the cashier sees the result. The sale may go over the limit only with an approved request. Then returns (receipt lookup from local and server sales), then cash-up count and sign-off, then manager home and the variance report.
 2. Returns (needs receipt lookup from local and server sales), then cash-up count and sign-off, then manager home and the variance report.
 3. **Fix the cash-up approval mismatch** (`docs/DECISIONS.md`, problem 1) with the user before building sign-off, because the matrix and the journey disagree about who may approve.
 4. Ask the user for the **cash-up variance and return reason codes** (requirements, open question 6); do not invent them.

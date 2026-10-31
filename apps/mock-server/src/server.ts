@@ -1,10 +1,11 @@
 import http from "node:http";
 import { randomUUID } from "node:crypto";
 import {
-  ApprovalDecisionInput, LoginRequest, PrintLogInput, SaleInput, ShiftCloseInput, ShiftOpenInput, cashOf, computeTotals, creditOf,
+  ApprovalDecisionInput, CreateApprovalInput, LoginRequest, PrintLogInput, SaleInput, ShiftCloseInput, ShiftOpenInput,
+  cashOf, computeTotals, creditOf, discountAmount,
   type ApiError, type Approval, type Capabilities, type Customer, type Product, type Sale, type Shift, type VatMode,
 } from "@erp/api-contract";
-import { approvalArea, areasForRoles, can } from "@erp/permissions";
+import { approvalArea, approvalThreshold, areasForRoles, can, withinApprovalLimitFor } from "@erp/permissions";
 import { APPROVALS, CUSTOMERS, PRODUCTS, TASKS, USERS, type MockUser } from "./fixtures";
 
 export interface MockOptions { latencyMs?: number; vatRate?: number; vatMode?: VatMode }
@@ -23,10 +24,15 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
   const shiftKeys = new Map<string, string>(); // idempotency key -> shiftId + action
   const printLog = new Set<string>();
   let invoiceSeq = 0;
+  let approvalSeq = APPROVALS.length;
   const attempts = new Map<string, number>();
   const approvals = new Map<string, Approval>(structuredClone(APPROVALS).map((a) => [a.id, a]));
   /** Idempotency key -> the decision it already made, so a retry never posts twice. */
   const decisions = new Map<string, { approvalId: string; decision: "approve" | "reject" }>();
+  /** Idempotency key -> approval, so raising the same request twice returns the first one. */
+  const approvalCreates = new Map<string, string>();
+  /** An approved discount may be used by one sale only. */
+  const approvalUses = new Map<string, string>();
 
   const send = (res: http.ServerResponse, status: number, body: unknown) => {
     res.writeHead(status, { "content-type": "application/json" });
@@ -118,10 +124,22 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
       const input = parsed.data;
       const seen = sales.get(input.idempotencyKey);
       if (seen) return send(res, 200, { sale: seen, duplicate: true }); // a retry never posts twice
-      // The server is the authority on totals: it recomputes from the lines and its own VAT settings.
-      const expected = computeTotals(input.lines.reduce((n, l) => n + l.unitPrice * l.qty, 0), vatMode, vatRate);
-      if (input.vatMode !== vatMode || input.subtotal !== expected.subtotal || input.vat !== expected.vat || input.total !== expected.total) {
-        return fail(res, 400, "validation", "The sale total or VAT does not match the lines and the VAT settings.");
+      // The server is the authority on totals: it recomputes from the lines, any approved discount and its own VAT settings.
+      const gross = input.lines.reduce((n, l) => n + l.unitPrice * l.qty, 0);
+      let discount = 0;
+      if (input.discountApprovalId) {
+        const approval = approvals.get(input.discountApprovalId);
+        if (!approval || approval.kind !== "discount" || approval.status !== "approved") {
+          return fail(res, 400, "validation", "The discount approval is missing or not approved.");
+        }
+        if (approval.requestedBy.id !== user.id) return fail(res, 400, "validation", "That discount belongs to another cashier.");
+        const usedBy = approvalUses.get(approval.id);
+        if (usedBy && usedBy !== input.idempotencyKey) return fail(res, 400, "validation", "That discount approval has already been used.");
+        discount = discountAmount(gross, approval.amount);
+      }
+      const expected = computeTotals(gross - discount, vatMode, vatRate);
+      if (input.vatMode !== vatMode || input.subtotal !== gross || input.vat !== expected.vat || input.total !== expected.total) {
+        return fail(res, 400, "validation", "The sale total or VAT does not match the lines, the discount and the VAT settings.");
       }
       if (input.payments.reduce((n, p) => n + p.amount, 0) !== input.total) return fail(res, 400, "validation", "The payments do not add up to the total.");
       const onCredit = creditOf(input.payments);
@@ -142,6 +160,7 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
         cashier: { id: user.id, name: user.name }, postedAt: new Date().toISOString(),
       };
       sales.set(input.idempotencyKey, sale);
+      if (input.discountApprovalId) approvalUses.set(input.discountApprovalId, input.idempotencyKey);
       return send(res, 200, { sale, duplicate: false });
     }
     if (req.method === "POST" && url.pathname === "/api/print-log") {
@@ -152,6 +171,42 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
     }
 
     // Approvals are decided only on the server. The inbox shows what the role may decide; the server enforces it.
+    if (req.method === "POST" && url.pathname === "/api/approvals") {
+      const parsed = CreateApprovalInput.safeParse(await readJson(req));
+      if (!parsed.success) return fail(res, 400, "validation", parsed.error.issues[0]?.message ?? "The request is incomplete.");
+      const input = parsed.data;
+      if (!can(caps(user), "Stores (POS)", "C")) return fail(res, 403, "forbidden", "Your role cannot raise this request.");
+      const existingId = approvalCreates.get(input.idempotencyKey);
+      if (existingId) {
+        const existing = approvals.get(existingId);
+        if (existing) return send(res, 200, { approval: existing, duplicate: true });
+      }
+      let limit: number;
+      let unit = input.unit;
+      let customer: Customer | undefined;
+      if (input.kind === "credit_over_limit") {
+        customer = customers.find((c) => c.id === input.customerId);
+        if (!customer) return fail(res, 400, "validation", "That customer does not exist.");
+        if (customer.creditLimit === undefined) return fail(res, 400, "validation", `${customer.name} has no credit terms.`);
+        const available = Math.max(0, customer.creditLimit - (customer.balance ?? 0));
+        if (input.amount <= available) return fail(res, 400, "validation", `${customer.name} still has room under their limit; no approval is needed.`);
+        limit = customer.creditLimit;
+        unit = "naira";
+      } else {
+        const threshold = approvalThreshold(input.kind);
+        limit = threshold.limit;
+        unit = threshold.unit;
+      }
+      const approval: Approval = {
+        id: `AP-${String(++approvalSeq).padStart(4, "0")}`,
+        kind: input.kind, status: "pending", amount: input.amount, limit, unit,
+        requestedBy: { id: user.id, name: user.name }, requestedAt: new Date().toISOString(),
+        customerName: customer?.name, requestNote: input.requestNote,
+      };
+      approvals.set(approval.id, approval);
+      approvalCreates.set(input.idempotencyKey, approval.id);
+      return send(res, 200, { approval, duplicate: false });
+    }
     if (req.method === "GET" && url.pathname === "/api/approvals") {
       const mine = [...approvals.values()]
         .filter((a) => a.requestedBy.id === user.id || can(caps(user), approvalArea(a.kind), "A"))
@@ -173,6 +228,7 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
       }
       if (approval.requestedBy.id === user.id) return fail(res, 403, "forbidden", "You cannot decide a request you raised.");
       if (!can(caps(user), approvalArea(approval.kind), "A")) return fail(res, 403, "forbidden", "Your role cannot decide this request.");
+      if (!withinApprovalLimitFor(caps(user), approval.kind, approval.amount)) return fail(res, 403, "forbidden", "This is above your limit. The MD must approve it.");
       if (approval.status !== "pending") return fail(res, 400, "validation", "This request has already been decided.");
       approval.status = parsed.data.decision === "approve" ? "approved" : "rejected";
       approval.decidedBy = { id: user.id, name: user.name };

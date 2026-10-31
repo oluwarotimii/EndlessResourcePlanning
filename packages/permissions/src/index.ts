@@ -61,9 +61,38 @@ const APPROVAL_AREA: Record<ApprovalKind, string> = {
 };
 export const approvalArea = (kind: ApprovalKind): string => APPROVAL_AREA[kind];
 
-/** The server enforces this too; the UI only hides the buttons. The creator never approves their own request. */
-export function mayDecideApproval(caps: Capabilities, kind: ApprovalKind, requesterId: string): boolean {
-  return caps.user.id !== requesterId && can(caps, approvalArea(kind), "A");
+const controlFor = (kind: ApprovalKind, role?: string) =>
+  kind === "discount"
+    ? role === "Cashier" ? "Discount at till" : "Discount"
+    : kind === "void" ? "Refund or void" : "credit sale over limit or overdue";
+
+/** The limit that applies to the approver level, read from the approval-limits table (configuration, not code). */
+export function approvalThreshold(kind: ApprovalKind): { limit: number; unit: "percent" | "naira" } {
+  const row = APPROVAL_LIMITS.find((r) => r.control === controlFor(kind));
+  return { limit: row?.limit ?? 0, unit: kind === "discount" ? "percent" : "naira" };
+}
+
+/** Can this role decide this amount? Credit over-limit is a block release, so it has no naira cap. */
+export function withinApprovalLimit(role: string, kind: ApprovalKind, amount: number): boolean {
+  if (kind === "credit_over_limit") return true;
+  // The role named in the "above" column is the top approver, so no cap applies at that level.
+  const above = APPROVAL_LIMITS.find((r) => r.control === controlFor(kind))?.above ?? "";
+  if (above && role.toLowerCase().includes(above.toLowerCase())) return true;
+  const row = APPROVAL_LIMITS.find((r) => r.control === controlFor(kind, role));
+  if (!row) return true; // no configured cap at this level (the MD or an unreviewed control)
+  return amount <= row.limit;
+}
+export const withinApprovalLimitFor = (caps: Capabilities, kind: ApprovalKind, amount: number): boolean =>
+  caps.roles.some((role) => withinApprovalLimit(role, kind, amount));
+
+/**
+ * The server enforces this too; the UI only hides the buttons.
+ * The creator never approves their own request, and the approver must be within their limit.
+ */
+export function mayDecideApproval(caps: Capabilities, kind: ApprovalKind, requesterId: string, amount?: number): boolean {
+  return caps.user.id !== requesterId
+    && can(caps, approvalArea(kind), "A")
+    && (amount === undefined || withinApprovalLimitFor(caps, kind, amount));
 }
 
 /** The areas a set of roles can see, merged across roles (used by the mock server; the real one is ERPNext). */

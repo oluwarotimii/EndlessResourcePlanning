@@ -2,6 +2,20 @@
 
 Every change that alters what the product does, for users or for the business, gets an entry here **in the same change**, newest first. Each entry says what changed, which documents were updated, and what is still open. The rule is in `CLAUDE.md`; `docs/HANDOVER.md` has the checklist.
 
+## 2026-10-31, Sprint 3 (second increment): S05 needs-manager request
+
+**What changed**
+- **S05 is built as a dialog inside the till.** "Ask a manager" lets a cashier request a discount (a whole percentage) or a void of the current sale, with an optional reason. The request lands in A01 with a unique key, so sending it twice never raises two requests. Nothing on the till changes until the request is approved; the cashier checks the result with "Check again".
+- **An approved discount comes off the gross subtotal before VAT.** One shared `discountAmount` rule is used by the till, the receipt and the server. The till shows the discount as its own line, the sale carries `discountApprovalId`, and the server applies the approval exactly once. Any later change to the lines clears the discount, so a stale approval cannot be reused. An approved void clears the cart.
+- **Requests are blocked offline**; the action is hidden and the reason is shown rather than leaving a request that can never be decided.
+- **Server authority:** `POST /api/approvals` validates and keys the request, checks the create letter on `Stores (POS)`, uses the configured limit, requires a customer with credit terms and actual over-limit room for credit requests, and is idempotent. Decision now also refuses an amount above the approver's own limit; the inbox says "above your limit, the MD must decide". Seed `AP-0001` is 2% so a manager can decide it. The sale endpoint requires an approved, unused discount raised by the same cashier and recomputes VAT and total.
+- Tests: contract (`CreateApprovalInput`, `discountAmount`), permissions thresholds, mock-server raise/limit/discount-reuse cases, and two till flows (discount and void).
+- **Documentation status:** a dialog can count as a built screen (`BUILT_DIALOGS`), so S05 is reported as built without inventing a route.
+
+**Documents updated:** `docs/SCREEN-STATUS.md` (S05 built), `docs/screen-status-notes.json`, `docs/DECISIONS.md`, `docs/HANDOVER.md`, `README.md`.
+
+**Open:** the over-limit credit request from the till (CR01) is the next increment. Real approval limits still need the MD to confirm them. Cash-up sign-off remains blocked by the source-document mismatch in `docs/DECISIONS.md` (problem 1), and the cash-up variance / return reason codes are still an open question.
+
 ## 2026-10-31, Sprint 3 (first increment): approvals engine and inbox
 
 **What changed**

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
   ApiError, ApprovalResponse, ApprovalsResponse, Capabilities, CustomersResponse, LoginResponse, ProductsResponse, SaleResponse, ShiftResponse, TasksResponse, UsersResponse,
-  type ApprovalDecisionInput, type LoginRequest, type PrintLogInput, type SaleInput, type ShiftCloseInput, type ShiftOpenInput,
+  type ApprovalDecisionInput, type CreateApprovalInput, type LoginRequest, type PrintLogInput, type SaleInput, type ShiftCloseInput, type ShiftOpenInput,
 } from "@erp/api-contract";
 
 /** Screens only ever talk to this interface. Mock today, ERPNext adapter in Sprint 5. */
@@ -20,6 +20,7 @@ export interface ApiClient {
   logPrint(token: string, input: PrintLogInput): Promise<void>;
   /** Decisions are online-only and idempotent. The server enforces limits and the creator rule. */
   approvals(token: string): Promise<ApprovalsResponse>;
+  createApproval(token: string, input: CreateApprovalInput): Promise<ApprovalResponse>;
   decideApproval(token: string, id: string, input: ApprovalDecisionInput): Promise<ApprovalResponse>;
 }
 
@@ -63,6 +64,7 @@ export function httpApi(base = ""): ApiClient {
     closeShift: (token, input) => call("/api/shifts/close", ShiftResponse, { method: "POST", token, body: JSON.stringify(input) }),
     logPrint: (token, input) => call("/api/print-log", z.object({}).passthrough(), { method: "POST", token, body: JSON.stringify(input) }).then(() => undefined),
     approvals: (token) => call("/api/approvals", ApprovalsResponse, { token }),
+    createApproval: (token, input) => call("/api/approvals", ApprovalResponse, { method: "POST", token, body: JSON.stringify(input) }),
     decideApproval: (token, id, input) => call(`/api/approvals/${encodeURIComponent(id)}/decision`, ApprovalResponse, { method: "POST", token, body: JSON.stringify(input) }),
     logout: (token) => call("/api/logout", z.object({}).passthrough(), { method: "POST", token }).then(() => undefined),
   };

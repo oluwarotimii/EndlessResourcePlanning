@@ -10,3 +10,8 @@ export const BUILT: Record<string, LazyExoticComponent<ComponentType>> = {
   P06: lazy(() => import("./PrintTemplatesPage").then((m) => ({ default: m.PrintTemplatesPage }))),
   A01: lazy(() => import("./ApprovalsPage").then((m) => ({ default: m.ApprovalsPage }))),
 };
+
+/** Screens built as a dialog inside another screen, so they have no route of their own. */
+export const BUILT_DIALOGS: Record<string, true> = {
+  S05: true,
+};

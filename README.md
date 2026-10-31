@@ -45,7 +45,8 @@ Demo PINs: Cashier **1111**, Branch manager **2222**, Warehouse officer **3333**
 
 - **Approvals inbox (A01):** who raised the request, what it is, the amount, the limit, the customer and the note. Approve by holding until the bar fills; reject through a dialog that requires a reason. Decided requests show who decided and why.
 - **Rules enforced twice:** the UI hides the controls when the role may not decide, the request is the user's own, or the device is offline; the mock server checks the same rules and that a decision is still pending. Decisions are idempotent.
-- Requests are raised from the screens next (`S05` needs-manager request and the manager-approval half of `CR01`); the mock seeds a few for the demo.
+- **S05 (needs-manager request) is built inside the till:** "Ask a manager" raises a discount or void request with an optional reason. Nothing changes until approval; an approved discount applies to the gross subtotal before VAT, and an approved void clears the cart. Requests are blocked offline.
+- The over-limit credit request (`CR01`) is the next increment; the mock seeds a few requests for the demo.
 
 ## What Sprint 2.1 adds (VAT, credit, split payments)
 

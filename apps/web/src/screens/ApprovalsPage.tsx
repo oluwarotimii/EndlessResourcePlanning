@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Approval, ApprovalUnit } from "@erp/api-contract";
-import { mayDecideApproval } from "@erp/permissions";
+import { mayDecideApproval, withinApprovalLimitFor } from "@erp/permissions";
 import { ApiFailure } from "../api/client";
 import { t, type TextKey } from "../i18n";
 import { useSession } from "../state/session";
@@ -100,6 +100,7 @@ export function ApprovalsPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         {approvals?.map((a) => {
           const canDecide = mayDecideApproval(caps, a.kind, a.requestedBy.id);
+          const withinLimit = withinApprovalLimitFor(caps, a.kind, a.amount);
           const ownRequest = a.requestedBy.id === caps.user.id;
           return (
             <Card key={a.id} className="p-4 sm:p-5" data-testid={`approval-${a.id}`}>
@@ -140,7 +141,7 @@ export function ApprovalsPage() {
                 <div className="mt-4">
                   {offline ? (
                     <p className="rounded-xl bg-warning-subtle p-3 text-warning-ink">{t("approval.offline")}</p>
-                  ) : canDecide ? (
+                  ) : canDecide && withinLimit ? (
                     <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
                       <HoldToConfirm
                         label={t("approval.hold")}
@@ -151,7 +152,7 @@ export function ApprovalsPage() {
                       <Button variant="subtle" disabled={busy === a.id} onClick={() => openReject(a)}>{t("approval.reject")}</Button>
                     </div>
                   ) : (
-                    <p className="text-text-muted">{ownRequest ? t("approval.own") : t("approval.notYours")}</p>
+                    <p className="text-text-muted">{ownRequest ? t("approval.own") : canDecide ? t("approval.aboveLimit") : t("approval.notYours")}</p>
                   )}
                 </div>
               )}

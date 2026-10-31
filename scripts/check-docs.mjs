@@ -12,7 +12,10 @@ const problems = [];
 
 // ---- 1. screen status
 const screens = JSON.parse(read("packages/permissions/src/data/screens.json"));
-const built = new Set([...read("apps/web/src/screens/registry.ts").matchAll(/^\s+([A-Z]+\d+):\s*lazy/gm)].map((m) => m[1]));
+const built = new Set([
+  ...read("apps/web/src/screens/registry.ts").matchAll(/^\s+([A-Z]+\d+):\s*lazy/gm),
+  ...read("apps/web/src/screens/registry.ts").matchAll(/^\s+([A-Z]+\d+):\s*true/gm),
+].map((m) => m[1]));
 const notes = JSON.parse(read("docs/screen-status-notes.json"));
 const status = (s) => (built.has(s.id) ? "Built" : notes[s.id] ? "Partly built" : "Placeholder");
 const esc = (v) => String(v).replaceAll("|", "/");

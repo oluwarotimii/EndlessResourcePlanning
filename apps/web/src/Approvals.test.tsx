@@ -16,7 +16,7 @@ const MANAGER: Capabilities = { user: { id: "u-manager", name: "Tunde Bello" }, 
 
 const seed = (): Approval[] => [
   {
-    id: "AP-0001", kind: "discount", status: "pending", amount: 12, limit: 3, unit: "percent",
+    id: "AP-0001", kind: "discount", status: "pending", amount: 2, limit: 3, unit: "percent",
     requestedBy: { id: "u-cashier", name: "Amaka Obi" }, requestedAt: "2026-10-31T09:15:00.000Z",
     requestNote: "Box was already open on the shelf.",
   },
@@ -46,6 +46,7 @@ function fakeServer() {
       if (s.down) throw new ApiFailure("unavailable", "unavailable");
       return { approvals: approvals.map((a) => ({ ...a })) };
     },
+    createApproval: async () => { throw new Error("not used"); },
     decideApproval: async (_t, id, input) => {
       if (s.down) throw new ApiFailure("unavailable", "unavailable");
       s.decisions.push({ id, input });
@@ -84,7 +85,7 @@ describe("approvals inbox (A01)", () => {
     const card = await screen.findByTestId("approval-AP-0001");
     expect(within(card).getByText("Raised by Amaka Obi")).toBeInTheDocument();
     expect(within(card).getByText("Discount")).toBeInTheDocument();
-    expect(within(card).getByText("12%")).toBeInTheDocument();
+    expect(within(card).getByText("2%")).toBeInTheDocument();
     expect(within(card).getByText("3%")).toBeInTheDocument();
     expect(within(card).getByText(/Box was already open/)).toBeInTheDocument();
   });

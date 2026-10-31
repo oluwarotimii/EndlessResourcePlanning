@@ -135,6 +135,28 @@ describe("till endpoints (Sprint 2/3)", () => {
     const h = await login("u-warehouse", "3333");
     expect((await post("/api/sales", sale(uuid()), h)).status).toBe(403);
   });
+
+  it("an approved discount is applied once, and cannot be reused or used before approval", async () => {
+    const cashier = await login("u-cashier", "1111");
+    const manager = await login("u-manager", "2222");
+    const raise = async () => ApprovalResponse.parse(await (await post("/api/approvals", {
+      idempotencyKey: uuid(), kind: "discount", amount: 2, unit: "percent",
+    }, cashier)).json()).approval;
+    const approve = (id: string) => post(`/api/approvals/${id}/decision`, { idempotencyKey: uuid(), decision: "approve" }, manager);
+
+    const approved = await raise();
+    await approve(approved.id);
+    const shiftId = await openShift(cashier);
+    const discounted = { discountApprovalId: approved.id, vat: 889, total: 12740, payments: [{ method: "cash", amount: 12740 }] };
+    const body = sale(shiftId, discounted);
+    const first = SaleResponse.parse(await (await post("/api/sales", body, cashier)).json());
+    expect(first.sale).toMatchObject({ subtotal: 13000, total: 12740, discountApprovalId: approved.id });
+    expect(SaleResponse.parse(await (await post("/api/sales", body, cashier)).json()).duplicate).toBe(true);
+    expect((await post("/api/sales", sale(shiftId, discounted), cashier)).status).toBe(400); // already used
+
+    const pending = await raise();
+    expect((await post("/api/sales", sale(shiftId, { ...discounted, discountApprovalId: pending.id }), cashier)).status).toBe(400);
+  });
 });
 
 describe("approvals engine (Sprint 3)", () => {
@@ -146,7 +168,7 @@ describe("approvals engine (Sprint 3)", () => {
     const h = await login("u-manager", "2222");
     const body = ApprovalsResponse.parse(await (await fetch(`${base}/api/approvals`, { headers: h })).json());
     const discount = body.approvals.find((a) => a.id === "AP-0001");
-    expect(discount).toMatchObject({ kind: "discount", amount: 12, limit: 3, unit: "percent", requestedBy: { name: "Amaka Obi" } });
+    expect(discount).toMatchObject({ kind: "discount", amount: 2, limit: 3, unit: "percent", requestedBy: { name: "Amaka Obi" } });
   });
 
   it("a cashier sees only the requests they raised, never the inbox", async () => {
@@ -180,6 +202,41 @@ describe("approvals engine (Sprint 3)", () => {
     expect((await decide("AP-0004", { idempotencyKey: crypto.randomUUID(), decision: "approve" }, manager)).status).toBe(403);
     const warehouse = await login("u-warehouse", "3333");
     expect((await decide("AP-0003", { idempotencyKey: crypto.randomUUID(), decision: "approve" }, warehouse)).status).toBe(403);
+  });
+
+  it("a cashier raises a request that lands in the inbox; the same key never raises it twice", async () => {
+    const cashier = await login("u-cashier", "1111");
+    const key = crypto.randomUUID();
+    const body = { idempotencyKey: key, kind: "discount", amount: 2, unit: "percent", requestNote: "Open box" };
+    const first = ApprovalResponse.parse(await (await post("/api/approvals", body, cashier)).json());
+    expect(first.duplicate).toBe(false);
+    expect(first.approval).toMatchObject({ kind: "discount", status: "pending", amount: 2, limit: 3, unit: "percent", requestedBy: { id: "u-cashier" } });
+    const again = ApprovalResponse.parse(await (await post("/api/approvals", body, cashier)).json());
+    expect(again.duplicate).toBe(true);
+    expect(again.approval.id).toBe(first.approval.id);
+    const manager = await login("u-manager", "2222");
+    const inbox = ApprovalsResponse.parse(await (await fetch(`${base}/api/approvals`, { headers: manager })).json());
+    expect(inbox.approvals.some((a) => a.id === first.approval.id)).toBe(true);
+  });
+
+  it("a manager cannot approve a discount above their own limit", async () => {
+    const cashier = await login("u-cashier", "1111");
+    const raised = ApprovalResponse.parse(await (await post("/api/approvals", {
+      idempotencyKey: crypto.randomUUID(), kind: "discount", amount: 5, unit: "percent",
+    }, cashier)).json());
+    const manager = await login("u-manager", "2222");
+    const res = await decide(raised.approval.id, { idempotencyKey: crypto.randomUUID(), decision: "approve" }, manager);
+    expect(res.status).toBe(403);
+    expect(ApiError.parse(await res.json()).message).toMatch(/above your limit/i);
+  });
+
+  it("a credit over-limit request needs a customer, uses their credit limit, and is refused when there is room", async () => {
+    const cashier = await login("u-cashier", "1111");
+    const base = { idempotencyKey: crypto.randomUUID(), kind: "credit_over_limit", unit: "naira" };
+    expect((await post("/api/approvals", { ...base, amount: 13000 }, cashier)).status).toBe(400); // no customer
+    expect((await post("/api/approvals", { ...base, amount: 1000, customerId: "c1" }, cashier)).status).toBe(400); // still has room
+    const over = ApprovalResponse.parse(await (await post("/api/approvals", { ...base, amount: 13000, customerId: "c2" }, cashier)).json());
+    expect(over.approval).toMatchObject({ kind: "credit_over_limit", amount: 13000, limit: 100000, customerName: "Bola Ventures" });
   });
 });
 

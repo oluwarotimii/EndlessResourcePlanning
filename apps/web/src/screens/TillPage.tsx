@@ -1,12 +1,13 @@
-import { CheckCircle2, Minus, PauseCircle, Plus, Printer, ScanBarcode, Search, UserRound, WifiOff } from "lucide-react";
+import { CheckCircle2, Minus, PauseCircle, Plus, Printer, ScanBarcode, Search, ShieldCheck, UserRound, WifiOff } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { computeTotals, creditOf, type Customer, type Payment, type PaymentMethod, type Product, type SaleInput } from "@erp/api-contract";
+import { computeTotals, creditOf, discountAmount, type Customer, type Payment, type PaymentMethod, type Product, type SaleInput } from "@erp/api-contract";
 import { t } from "../i18n";
 import { addProduct, cartSubtotal, emptyCart, itemCount, lineTotal, setQty, type Cart } from "../features/till/cart";
 import { cacheCatalog, findExact, loadCachedCatalog, search } from "../features/till/catalog";
 import { availableCredit, searchCustomers } from "../features/till/customers";
 import { saleBlock } from "../features/till/limits";
+import { NeedsManagerDialog } from "../features/till/NeedsManagerDialog";
 import { provisionalNumber, saleKey, type LocalSale } from "../features/shift/shift";
 import { useShift } from "../features/shift/useShift";
 import { usePrint } from "../features/print/PrintProvider";
@@ -20,7 +21,8 @@ import { Card } from "../ui/Card";
 export const toPrintDoc = (s: LocalSale, kind: PrintDoc["kind"], synced: boolean): PrintDoc => ({
   kind, number: s.invoiceNo ?? s.provisionalNo, copy: !synced, date: new Date(s.createdAt).toLocaleString(),
   cashier: s.cashierName, customer: s.customerName, lines: s.lines,
-  subtotal: s.subtotal, vatMode: s.vatMode, vat: s.vat, total: s.total, payments: s.payments,
+  subtotal: s.subtotal, discount: s.discount, discountPercent: s.discountPercent,
+  vatMode: s.vatMode, vat: s.vat, total: s.total, payments: s.payments,
 });
 
 const digits = (v: string) => v.replace(/\D/g, "");
@@ -52,6 +54,7 @@ export function TillPage() {
   const [custOpen, setCustOpen] = useState(false);
   const [splitOpen, setSplitOpen] = useState(false);
   const [split, setSplit] = useState<Partial<Record<PaymentMethod, string>>>({});
+  const [managerOpen, setManagerOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
   // Catalogue: show the cached copy at once, refresh from the server when reachable.
@@ -75,8 +78,10 @@ export function TillPage() {
   useEffect(() => { if (cartLoaded) void kv.set(cartKey, cart); }, [cart, cartLoaded, kv, cartKey]);
   useEffect(() => { input.current?.focus(); }, [loaded, done]);
 
-  // VAT follows the company setting: already in the price, added on top, or not charged at all.
-  const totals = computeTotals(cartSubtotal(cart), tenant.tax.mode, tenant.tax.vatRate);
+  // An approved discount comes off the gross subtotal before VAT; the server checks both again.
+  const grossSubtotal = cartSubtotal(cart);
+  const discount = cart.discount ? discountAmount(grossSubtotal, cart.discount.percent) : 0;
+  const totals = computeTotals(grossSubtotal - discount, tenant.tax.mode, tenant.tax.vatRate);
   const rate = String(+(tenant.tax.vatRate * 100).toFixed(2));
   const block = saleBlock(sync.queue, tenant.offline);
   const results = useMemo(() => search(products, term).slice(0, 24), [products, term]);
@@ -118,11 +123,14 @@ export function TillPage() {
       const now = new Date().toISOString();
       const payload: SaleInput = {
         idempotencyKey: key, clientCreatedAt: now, shiftId: shift.id, customerId: cart.customer?.id,
-        lines: cart.lines, subtotal: totals.subtotal, vatMode: tenant.tax.mode, vat: totals.vat, total, payments,
+        lines: cart.lines, subtotal: grossSubtotal, vatMode: tenant.tax.mode, vat: totals.vat, total,
+        discountApprovalId: cart.discount?.approvalId, payments,
       };
       await kv.set(cartKey, { ...cart, chargeKey: key });
       const local: LocalSale = {
-        key, shiftId: shift.id, lines: cart.lines, subtotal: totals.subtotal, vatMode: tenant.tax.mode, vat: totals.vat, total, payments,
+        key, shiftId: shift.id, lines: cart.lines, subtotal: grossSubtotal, discount: discount || undefined,
+        discountPercent: cart.discount?.percent, discountApprovalId: cart.discount?.approvalId,
+        vatMode: tenant.tax.mode, vat: totals.vat, total, payments,
         customerName: cart.customer?.name, cashierName: caps.user.name, createdAt: now, provisionalNo: provisionalNumber(key), synced: false,
       };
       await kv.set(saleKey(userId, key), local);
@@ -131,6 +139,16 @@ export function TillPage() {
       await reload();
       if (tenant.print.autoPrint) print(toPrintDoc(local, "receipt", false));
     } finally { setBusy(false); }
+  }
+
+  function applyDiscount(percent: number, approvalId: string) {
+    setCart((c) => ({ ...c, discount: { approvalId, percent }, chargeKey: undefined }));
+    setNotice(t("till.discountApproved", { rate: percent }));
+  }
+
+  function applyVoid() {
+    setCart(emptyCart()); setReceived(""); setSplit({}); setSplitOpen(false);
+    setNotice(t("till.voidApproved"));
   }
 
   async function park() {
@@ -231,7 +249,13 @@ export function TillPage() {
           )}
           <dl className="mt-3 space-y-1 border-t border-border-strong pt-3">
             {tenant.tax.mode === "exclusive" && (
-              <div className="flex justify-between text-text-muted"><dt>{t("till.subtotal")}</dt><dd className="tabular" data-testid="subtotal">{money(totals.subtotal)}</dd></div>
+              <div className="flex justify-between text-text-muted"><dt>{t("till.subtotal")}</dt><dd className="tabular" data-testid="subtotal">{money(grossSubtotal)}</dd></div>
+            )}
+            {discount > 0 && cart.discount && (
+              <div className="flex justify-between text-text-muted">
+                <dt>{t("till.discount", { rate: cart.discount.percent })}</dt>
+                <dd className="tabular" data-testid="discount">-{money(discount)}</dd>
+              </div>
             )}
             {tenant.tax.mode !== "none" && (
               <div className="flex justify-between text-text-muted"><dt>{t(tenant.tax.mode === "exclusive" ? "till.vat.exclusive" : "till.vat.inclusive", { rate })}</dt><dd className="tabular" data-testid="vat">{money(totals.vat)}</dd></div>
@@ -284,6 +308,11 @@ export function TillPage() {
                 <Button till variant="ghost" onClick={() => { setSplitOpen(false); setSplit({}); }}>{t("till.splitClose")}</Button>
               </div>
             </div>
+          )}
+          {!offline && (
+            <Button variant="subtle" className="mt-2 w-full" disabled={payDisabled} onClick={() => setManagerOpen(true)}>
+              <ShieldCheck className="h-5 w-5" aria-hidden="true" />{t("till.needsManager")}
+            </Button>
           )}
           <Button variant="ghost" className="mt-2 w-full" disabled={cart.lines.length === 0} onClick={() => void park()}>
             <PauseCircle className="h-5 w-5" aria-hidden="true" />{t("till.park")}
@@ -350,6 +379,15 @@ export function TillPage() {
           </Card>
         )}
       </aside>
+
+      <NeedsManagerDialog
+        open={managerOpen}
+        total={totals.total}
+        discounted={!!cart.discount}
+        onClose={() => setManagerOpen(false)}
+        onDiscount={applyDiscount}
+        onVoid={applyVoid}
+      />
     </div>
   );
 }
