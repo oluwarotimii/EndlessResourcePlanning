@@ -15,6 +15,8 @@ export const USERS: MockUser[] = [
   { id: "u-auditor", name: "Hauwa Bello", role: "Auditor", pin: "8888", branch: "Pilot Branch" },
   { id: "u-cashctl", name: "Ifeoma Nwosu", role: "Cash controller", pin: "9999", branch: "Pilot Branch" },
   { id: "u-rider2", name: "Femi Adewale", role: "Rider / courier", pin: "1212", branch: "Pilot Branch" },
+  // A sister branch, so a stock request can be made of another branch, not only the warehouse.
+  { id: "u-warehouse2", name: "Bayo Fashola", role: "Warehouse officer", pin: "3334", branch: "Victoria Island Branch" },
 ];
 
 export const TASKS: Record<string, Task[]> = {
@@ -47,7 +49,7 @@ export const TASKS: Record<string, Task[]> = {
   ],
 };
 
-import type { Approval, Customer, DeliveryOrder, Product } from "@erp/api-contract";
+import type { Approval, Customer, DeliveryOrder, Product, PurchaseOrder } from "@erp/api-contract";
 
 /**
  * Work waiting in the approvals inbox. AP-0004 was raised by the branch manager,
@@ -105,6 +107,31 @@ export const CUSTOMERS: Customer[] = [
  * A shortage is valued at cost and that value is shown only to the people who rule on it.
  */
 export const COST_PRICE: Record<string, number> = Object.fromEntries(PRODUCTS.map((p) => [p.id, Math.round(p.price * 0.7)]));
+
+/** Stock held by sister branches, who may dispatch a stock request the same way the warehouse does. */
+export const BRANCH_STOCK: Record<string, Record<string, number>> = {
+  "Victoria Island Branch": { p1: 10, p3: 15, p7: 8 },
+};
+
+/**
+ * Purchase orders waiting to be received at the warehouse (H01). In ERPNext these are Purchase Orders; raising one is a
+ * later screen (R01), so they arrive here already open.
+ */
+export const PURCHASE_ORDERS: PurchaseOrder[] = [
+  {
+    id: "PO-0001", supplierName: "Lagos Electronics Distributors", reference: "INV-88213", status: "open",
+    lines: [
+      { productId: "p1", name: "Phone charger 20W", qtyOrdered: 50, qtyReceived: 0 },
+      { productId: "p2", name: "USB-C cable 1m", qtyOrdered: 100, qtyReceived: 0 },
+    ],
+    createdAt: "2026-10-30T09:00:00.000Z",
+  },
+  {
+    id: "PO-0002", supplierName: "Lekki Gadget Hub", reference: "INV-44120", status: "partially_received",
+    lines: [{ productId: "p3", name: "Bluetooth earbuds", qtyOrdered: 20, qtyReceived: 12 }],
+    createdAt: "2026-10-29T09:00:00.000Z",
+  },
+];
 
 /** Online orders waiting to be delivered (in ERPNext these come from Sales Orders and Delivery Notes). */
 export const DELIVERY_ORDERS: DeliveryOrder[] = [

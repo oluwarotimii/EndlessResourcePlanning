@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { CountSubmitInput, ProofInput, DispatchInput, PrintLogInput, ReceiveInput, SaleInput, ShiftCloseInput, ShiftOpenInput } from "@erp/api-contract";
+import { CountSubmitInput, ProofInput, DispatchInput, GoodsReceiptInput, PrintLogInput, ReceiveInput, SaleInput, ShiftCloseInput, ShiftOpenInput } from "@erp/api-contract";
 import { SendError, createQueue, type FlushReport, type QueueItem, type QueueItemType, type Sender, type Storage } from "@erp/offline";
 import { ApiFailure, type ApiClient } from "../api/client";
 import { saleKey, type LocalSale } from "../features/shift/shift";
@@ -48,6 +48,7 @@ export function makeSender(api: ApiClient, token: string, storage: Storage, user
         case "shift.close": return (await api.closeShift(token, ShiftCloseInput.parse(item.payload))).duplicate ? "duplicate" : "ok";
         case "transfer.dispatch": return (await api.dispatchTransfer(token, DispatchInput.parse(item.payload))).duplicate ? "duplicate" : "ok";
         case "transfer.receive": { const input = ReceiveInput.parse(item.payload); return (await api.receiveTransfer(token, input.transferId, input)).duplicate ? "duplicate" : "ok"; }
+        case "goods_receipt.submit": { const input = GoodsReceiptInput.parse(item.payload); return (await api.receiveGoods(token, input.purchaseOrderId, input)).duplicate ? "duplicate" : "ok"; }
         case "count.submit": return (await api.submitCount(token, CountSubmitInput.parse(item.payload))).duplicate ? "duplicate" : "ok";
         case "delivery.proof": return (await api.proveDelivery(token, ProofInput.parse(item.payload))).duplicate ? "duplicate" : "ok";
         case "print.log": await api.logPrint(token, PrintLogInput.parse(item.payload)); return "ok";

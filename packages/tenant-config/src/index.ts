@@ -58,7 +58,7 @@ export const TenantConfig = z.object({
   /** Delivery settings. The failed-delivery reasons are PLACEHOLDERS until the business supplies its real ones. */
   delivery: z.object({ failedReasons: z.array(z.string().min(1)).min(1), codRemitHours: z.number().int().positive() }),
   /** Stock and delivery settings. */
-  stock: z.object({ inTransitAlertHours: z.number().int().positive(), shortageRulingHours: z.number().int().positive(), recountByDifferentPerson: z.boolean() }),
+  stock: z.object({ inTransitAlertHours: z.number().int().positive(), shortageRulingHours: z.number().int().positive(), recountByDifferentPerson: z.boolean(), overReceiptAllowancePercent: z.number().min(0) }),
   offline: z.object({
     maxOfflineSalesPerTill: z.number().int().positive(),
     syncWindowHours: z.number().int().positive(),

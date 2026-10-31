@@ -73,6 +73,14 @@ Demo PINs: Cashier **1111**, Branch manager **2222**, Warehouse officer **3333**
 - Real-browser test for delivery: `node e2e/delivery.cjs` (needs a fresh mock server).
 - Real-browser test: `node e2e/stock.cjs`.
 
+## Goods receipt (H01), added after Sprint 4
+
+- **Goods receipt from a supplier (H01):** scan what arrives against a purchase order; receiving less than ordered is normal (the rest may come in a later delivery); receiving more than the order plus the configured allowance (`stock.overReceiptAllowancePercent`) is refused, the same way ERPNext's Purchase Receipt works. Works offline. Raising a purchase order is a later screen (R01); orders arrive here already open, seeded in the mock. This was the last MVP placeholder; the 29 MVP screens are now all built or partly built.
+
+## Branch-to-branch stock requests
+
+- **A branch can ask a sister branch for stock, not only the warehouse (H02).** Picking a sister branch shows what it holds, per item, before asking. A sister branch's own Warehouse officer packs and sends it (H03, unchanged in shape) from that branch's own stock; H04 and H05 show which branch stock moved through. A demo sister branch, "Victoria Island Branch", and its officer ("Bayo Fashola", PIN **3334**) are seeded for this.
+
 ## What Sprint 2.1 adds (VAT, credit, split payments)
 
 - **VAT is a company setting** (`tax.mode` in `tenant.json`): `inclusive` (price already has VAT), `exclusive` (VAT added on top, the customer pays more) or `none`. One shared rule is used by the till, documents and the server.

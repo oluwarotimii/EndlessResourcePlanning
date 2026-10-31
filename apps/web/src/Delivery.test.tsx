@@ -33,7 +33,7 @@ function fakeServer(me: Capabilities, orders: DeliveryOrder[]) {
     users: async () => ({ deviceBranch: "Pilot Branch", users: [] }), login: unused, capabilities: async () => me, tasks: async () => ({ tasks: [] }), logout: async () => undefined,
     products: async () => ({ products: [], asOf: "x" }), customers: async () => ({ customers: [] }), createSale: unused, openShift: unused, closeShift: unused, logPrint: async () => undefined,
     approvals: async () => ({ approvals: [] }), createApproval: unused, decideApproval: unused, summary: unused, cashUpVariance: unused, lookupSale: unused, createReturn: unused,
-    stockRequests: unused, createStockRequest: unused, transfers: unused, dispatchTransfer: unused, receiveTransfer: unused, stockLevels: unused, inTransitReport: unused,
+    stockRequests: unused, createStockRequest: unused, branches: unused, transfers: unused, dispatchTransfer: unused, receiveTransfer: unused, purchaseOrders: unused, receiveGoods: unused, stockLevels: unused, inTransitReport: unused,
     countSheet: unused, counts: unused, submitCount: unused, requestWriteOff: unused,
     deliveryOrders: async () => { down(); return { orders: mine() }; },
     riders: async () => ({ riders: [{ id: "u-rider", name: "Chidi Okafor" }, { id: "u-rider2", name: "Femi Adewale" }] }),

@@ -29,7 +29,7 @@ function fakeServer(me: Capabilities, counts: StockCount[] = []) {
     users: async () => ({ deviceBranch: "Pilot Branch", users: [] }), login: unused, capabilities: async () => me, tasks: async () => ({ tasks: [] }), logout: async () => undefined,
     products: async () => ({ products: [], asOf: "x" }), customers: async () => ({ customers: [] }), createSale: unused, openShift: unused, closeShift: unused, logPrint: async () => undefined,
     approvals: async () => ({ approvals: [] }), createApproval: unused, decideApproval: unused, summary: unused, cashUpVariance: unused, lookupSale: unused, createReturn: unused,
-    stockRequests: unused, createStockRequest: unused, transfers: unused, dispatchTransfer: unused, receiveTransfer: unused, stockLevels: unused, inTransitReport: unused,
+    stockRequests: unused, createStockRequest: unused, branches: unused, transfers: unused, dispatchTransfer: unused, receiveTransfer: unused, purchaseOrders: unused, receiveGoods: unused, stockLevels: unused, inTransitReport: unused,
     countSheet: async (_t, location) => { down(); return { location, asOf: "now", items: ITEMS }; },
     counts: async () => { down(); return { counts: s.counts }; },
     submitCount: async (_t, input) => {

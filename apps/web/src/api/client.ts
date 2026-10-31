@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
-  BranchSummary, CodOutstanding, DeliveryOrderResponse, DeliveryOrdersResponse, RemitResponse, RidersResponse, CountResponse, CountSheet, CountsResponse, WriteOffRequestResponse, InTransitReport, StockLevelsResponse, TransferResponse, TransfersResponse, StockRequestResponse, StockRequestsResponse, ReturnResponse, SaleLookupResponse, CashUpVarianceReport, ApiError, ApprovalResponse, ApprovalsResponse, Capabilities, CustomersResponse, LoginResponse, ProductsResponse, SaleResponse, ShiftResponse, TasksResponse, UsersResponse,
-  type AssignInput, type ProofInput, type RemitInput, type CountSubmitInput, type WriteOffRequestInput, type DispatchInput, type ReceiveInput, type CreateStockRequestInput, type ReturnInput, type ApprovalDecisionInput, type CreateApprovalInput, type LoginRequest, type PrintLogInput, type SaleInput, type ShiftCloseInput, type ShiftOpenInput,
+  BranchesResponse, BranchSummary, CodOutstanding, DeliveryOrderResponse, DeliveryOrdersResponse, RemitResponse, RidersResponse, CountResponse, CountSheet, CountsResponse, WriteOffRequestResponse, InTransitReport, PurchaseOrderResponse, PurchaseOrdersResponse, StockLevelsResponse, TransferResponse, TransfersResponse, StockRequestResponse, StockRequestsResponse, ReturnResponse, SaleLookupResponse, CashUpVarianceReport, ApiError, ApprovalResponse, ApprovalsResponse, Capabilities, CustomersResponse, LoginResponse, ProductsResponse, SaleResponse, ShiftResponse, TasksResponse, UsersResponse,
+  type AssignInput, type ProofInput, type RemitInput, type CountSubmitInput, type WriteOffRequestInput, type DispatchInput, type GoodsReceiptInput, type ReceiveInput, type CreateStockRequestInput, type ReturnInput, type ApprovalDecisionInput, type CreateApprovalInput, type LoginRequest, type PrintLogInput, type SaleInput, type ShiftCloseInput, type ShiftOpenInput,
 } from "@erp/api-contract";
 
 /** Screens only ever talk to this interface. Mock today, ERPNext adapter in Sprint 5. */
@@ -39,11 +39,17 @@ export interface ApiClient {
   dispatchTransfer(token: string, input: DispatchInput): Promise<TransferResponse>;
   /** Count what arrived. Safe to retry (idempotency key). */
   receiveTransfer(token: string, transferId: string, input: ReceiveInput): Promise<TransferResponse>;
+  /** Purchase orders waiting to be received from a supplier (H01). */
+  purchaseOrders(token: string): Promise<PurchaseOrdersResponse>;
+  /** Record what arrived from a supplier against a purchase order. Safe to retry (idempotency key). */
+  receiveGoods(token: string, purchaseOrderId: string, input: GoodsReceiptInput): Promise<PurchaseOrderResponse>;
   stockLevels(token: string, q?: string): Promise<StockLevelsResponse>;
   inTransitReport(token: string): Promise<InTransitReport>;
   stockRequests(token: string): Promise<StockRequestsResponse>;
-  /** Ask the warehouse for stock. Safe to retry (idempotency key). */
+  /** Ask the warehouse, or a sister branch, for stock. Safe to retry (idempotency key). */
   createStockRequest(token: string, input: CreateStockRequestInput): Promise<StockRequestResponse>;
+  /** Sister branches that may be asked for stock. */
+  branches(token: string): Promise<BranchesResponse>;
   /** Find a sale by invoice number so goods can be returned against it. */
   lookupSale(token: string, invoiceNo: string): Promise<SaleLookupResponse>;
   /** Record a return under an approved refund. Safe to retry (idempotency key). */
@@ -97,9 +103,12 @@ export function httpApi(base = ""): ApiClient {
     createReturn: (token, input) => call("/api/returns", ReturnResponse, { method: "POST", token, body: JSON.stringify(input) }),
     stockRequests: (token) => call("/api/stock-requests", StockRequestsResponse, { token }),
     createStockRequest: (token, input) => call("/api/stock-requests", StockRequestResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    branches: (token) => call("/api/branches", BranchesResponse, { token }),
     transfers: (token) => call("/api/transfers", TransfersResponse, { token }),
     dispatchTransfer: (token, input) => call("/api/transfers", TransferResponse, { method: "POST", token, body: JSON.stringify(input) }),
     receiveTransfer: (token, transferId, input) => call(`/api/transfers/${encodeURIComponent(transferId)}/receive`, TransferResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    purchaseOrders: (token) => call("/api/purchase-orders", PurchaseOrdersResponse, { token }),
+    receiveGoods: (token, purchaseOrderId, input) => call(`/api/purchase-orders/${encodeURIComponent(purchaseOrderId)}/receive`, PurchaseOrderResponse, { method: "POST", token, body: JSON.stringify(input) }),
     stockLevels: (token, q = "") => call(`/api/stock?q=${encodeURIComponent(q)}`, StockLevelsResponse, { token }),
     inTransitReport: (token) => call("/api/reports/in-transit", InTransitReport, { token }),
     countSheet: (token, location) => call(`/api/count-sheet?location=${location}`, CountSheet, { token }),

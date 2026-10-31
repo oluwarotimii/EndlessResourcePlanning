@@ -47,6 +47,7 @@ This is the checklist for the custom Frappe app that sits on ERPNext and serves 
 | Sales Invoice (return) | refund approval, reason | A refund is an approved exception | Owner (Sales Return) + Proposal |
 | Material Request | client key, requester branch | Branch stock request | Owner |
 | Stock Entry (Material Transfer) | client key, shortage, receive note, received by, counted quantities | Dispatch and receive with a flagged shortage; the inventory says the standard entry has "no signature" | Owner + Proposal |
+| Purchase Order / Purchase Receipt | client key on the receipt | Goods receipt from a supplier (H01), idempotent | Owner (Purchase Receipt named in the inventory) + Proposal for the client key |
 | Item | family, variant label | Variants share a family so a mix-up can be spotted; may use ERPNext Item Variant (template + attributes) instead | Proposal |
 | Delivery Note / Sales Order | rider, payment mode, amount to collect | Delivery assignment and cash on delivery | Owner (Delivery Note, Delivery Trip) + Proposal |
 | User / Employee | PIN hash, device registration | PIN sign-in on shared tills | Proposal |
@@ -91,9 +92,12 @@ Method names are proposals; the paths and rules are the contract the mock alread
 | `/api/summary` | `get_branch_summary` | Sales, cash vs credit, refunds, open shifts, what is waiting for this user, shortages charged. |
 | `/api/reports/cashup-variance` | `report_closing_balance_differences` | Differences by cashier, worst first. |
 | `/api/reports/in-transit` | `report_in_transit` | Transfers on the road longer than the setting. |
-| `/api/stock-requests` | `list_stock_requests` / `create_stock_request` | Material Requests from a branch. |
-| `/api/transfers` | `list_transfers` / `dispatch_transfer` | Stock Entry (Material Transfer) with Add to Transit; the dispatcher cannot be the requester; cannot send more than asked or held. Owner + Seen. |
+| `/api/branches` | `list_sister_branches` | Branches that may be asked for stock instead of the warehouse (never the caller's own). |
+| `/api/stock-requests` | `list_stock_requests` / `create_stock_request` | Material Requests from a branch, to the warehouse or to a sister branch. |
+| `/api/transfers` | `list_transfers` / `dispatch_transfer` | Stock Entry (Material Transfer) with Add to Transit; the dispatcher cannot be the requester; cannot send more than asked or held. A request addressed to a sister branch can only be sent by someone at that branch, drawing from that branch's own stock, not the central warehouse; a warehouse-bound one needs someone tied to the warehouse. Owner + Seen (warehouse flow); Proposal (sister-branch scoping). |
 | `/api/transfers/:id/receive` | `receive_transfer` | Receiving Stock Entry from the in-transit entry; counted quantities; flag a shortage and open a ruling; the receiver cannot be the dispatcher; cannot receive more than sent. Seen (flow), Proposal (shortage). |
+| `/api/purchase-orders` | `list_purchase_orders` | Purchase Orders waiting to be received. Raising one is a later screen (R01); they arrive here already open. Owner (named in the inventory as Purchase Receipt's source document). |
+| `/api/purchase-orders/:id/receive` | `receive_goods` | Purchase Receipt against the order: counted quantities raise warehouse stock; receiving less than ordered is normal (the rest may come later); more than the order plus the over-receipt allowance (`stock.overReceiptAllowancePercent`) is refused. Proposal (standard ERPNext Buying behaviour, not yet confirmed on staging). |
 | `/api/stock` | `get_stock_levels` | Shelf and warehouse quantities from Bin. |
 | `/api/count-sheet` | `get_count_sheet` | Items to count **without quantities** (blind). |
 | `/api/counts` | `list_counts` / `submit_count` | Round 1 and the recount; the recount by a different person (setting); expected quantity hidden until final. |
@@ -120,7 +124,7 @@ Method names are proposals; the paths and rules are the contract the mock alread
 - **Admin cannot grant themselves access**; the MD holds a break-glass admin account (requirements).
 
 ## 9. The settings the front end reads (Single doctype)
-Everything in `packages/tenant-config/tenant.json` (see `docs/TENANT-CONFIG.md`) must be readable from ERPNext so a second company is set up without code: brand, theme, locale, currency, branch, task roles, enabled scopes, print paper and company details, **VAT mode and rate**, **payment methods**, split payments, **variant scan rule**, closing balance note values and difference reasons, return reasons, delivery failed reasons and cash hand-in time, stock alert and ruling times, recount rule, offline limits, idle lock, touch sizes. Reason lists are placeholders until the business supplies them.
+Everything in `packages/tenant-config/tenant.json` (see `docs/TENANT-CONFIG.md`) must be readable from ERPNext so a second company is set up without code: brand, theme, locale, currency, branch, task roles, enabled scopes, print paper and company details, **VAT mode and rate**, **payment methods**, split payments, **variant scan rule**, closing balance note values and difference reasons, return reasons, delivery failed reasons and cash hand-in time, stock alert and ruling times, recount rule, the over-receipt allowance for goods receipt, offline limits, idle lock, touch sizes. Reason lists are placeholders until the business supplies them.
 
 ## 10. Reports and print formats
 - **Script Reports:** closing balance differences by cashier, transfers in transit too long, delivery cash outstanding, branch summary, shortages and write-offs by branch, mix-ups by cashier (planned).

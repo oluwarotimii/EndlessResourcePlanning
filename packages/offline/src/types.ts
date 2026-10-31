@@ -1,4 +1,4 @@
-export type QueueItemType = "sale.create" | "shift.open" | "shift.close" | "print.log" | "transfer.dispatch" | "transfer.receive" | "count.submit" | "delivery.proof";
+export type QueueItemType = "sale.create" | "shift.open" | "shift.close" | "print.log" | "transfer.dispatch" | "transfer.receive" | "count.submit" | "delivery.proof" | "goods_receipt.submit";
 
 export interface QueueItem {
   /** The idempotency key. Replaying the same item can never post twice. */

@@ -637,11 +637,112 @@ describe("transfers (H03/H04): dispatch from the warehouse, count at the branch"
 
   it("stock lookup shows shelf and warehouse quantities, and only to roles with warehouse access", async () => {
     const wh = await as("u-warehouse", "3333");
-    const found = (await (await get("/api/stock?q=20W", wh)).json()) as { levels: Array<{ name: string; branch: number; warehouse: number }> };
+    const found = (await (await get("/api/stock?q=20W", wh)).json()) as { levels: Array<{ name: string; branch: number; warehouse: number; branches: Record<string, number> }> };
     expect(found.levels).toHaveLength(1);
     expect(found.levels[0]).toMatchObject({ name: "Phone charger 20W" });
     expect(found.levels[0]!.warehouse).toBeGreaterThan(0);
+    expect(found.levels[0]!.branches).toMatchObject({ "Victoria Island Branch": 10 });
     expect((await get("/api/stock", await as("u-cashier", "1111"))).status).toBe(403);
+  });
+});
+
+describe("branch-to-branch stock request: a sister branch can fulfill a request too", () => {
+  const uuid = () => crypto.randomUUID();
+  const as = async (userId: string, pin: string) => ({ authorization: `Bearer ${LoginResponse.parse(await (await post("/api/login", { userId, pin })).json()).token}` });
+  const get = (path: string, h: Record<string, string>) => fetch(`${base}${path}`, { headers: h });
+  type Req = { id: string; status: string; fromBranch?: string };
+  type Tr = { id: string; status: string; fromBranch?: string; lines: Array<{ productId: string; qtySent: number }> };
+  const stockOf = async (h: Record<string, string>, id: string) => ((await (await get("/api/stock", h)).json()) as { levels: Array<{ productId: string; branches: Record<string, number> }> }).levels.find((l) => l.productId === id)!;
+  const request = (h: Record<string, string>, body: Record<string, unknown>) => post("/api/stock-requests", { idempotencyKey: uuid(), lines: [{ productId: "p3", qty: 5 }], ...body }, h);
+  const dispatch = (h: Record<string, string>, requestId: string, lines: Array<{ productId: string; qty: number }>) => post("/api/transfers", { idempotencyKey: uuid(), requestId, lines }, h);
+
+  it("lists sister branches to ask, excluding the caller's own", async () => {
+    const manager = await as("u-manager", "2222");
+    expect(((await (await get("/api/branches", manager)).json()) as { branches: string[] }).branches).toEqual(["Victoria Island Branch"]);
+    const sister = await as("u-warehouse2", "3334");
+    expect(((await (await get("/api/branches", sister)).json()) as { branches: string[] }).branches).toEqual([]);
+  });
+
+  it("refuses a request from your own branch or an unknown one", async () => {
+    const manager = await as("u-manager", "2222");
+    expect((await request(manager, { fromBranch: "Pilot Branch" })).status).toBe(400);
+    expect((await request(manager, { fromBranch: "Nowhere Branch" })).status).toBe(400);
+  });
+
+  it("only someone at the sister branch can send its stock, drawn from that branch's own pool, not the warehouse", async () => {
+    const manager = await as("u-manager", "2222");
+    const sister = await as("u-warehouse2", "3334");
+    const wh = await as("u-warehouse", "3333");
+    const before = await stockOf(manager, "p3");
+    const { request: req } = (await (await request(manager, { fromBranch: "Victoria Island Branch" })).json()) as { request: Req };
+    expect(req.fromBranch).toBe("Victoria Island Branch");
+    expect((await dispatch(wh, req.id, [{ productId: "p3", qty: 5 }])).status).toBe(403); // the central warehouse cannot send a sister branch's stock
+    expect((await dispatch(sister, req.id, [{ productId: "p3", qty: 16 }])).status).toBe(400); // more than Victoria Island Branch holds (15)
+    const res = await dispatch(sister, req.id, [{ productId: "p3", qty: 5 }]);
+    expect(res.status).toBe(200);
+    const { transfer } = (await res.json()) as { transfer: Tr };
+    expect(transfer).toMatchObject({ status: "in_transit", fromBranch: "Victoria Island Branch", lines: [{ productId: "p3", qtySent: 5 }] });
+    expect((await stockOf(manager, "p3")).branches["Victoria Island Branch"]).toBe(before.branches["Victoria Island Branch"]! - 5);
+  });
+
+  it("a warehouse-bound request can only be sent by someone tied to the warehouse", async () => {
+    const manager = await as("u-manager", "2222");
+    const { request: req } = (await (await request(manager, {})).json()) as { request: Req };
+    const sister = await as("u-warehouse2", "3334");
+    expect((await dispatch(sister, req.id, [{ productId: "p3", qty: 1 }])).status).toBe(403); // not tied to the warehouse
+  });
+});
+
+describe("goods receipt (H01): receiving from a supplier against a purchase order", () => {
+  const uuid = () => crypto.randomUUID();
+  const as = async (userId: string, pin: string) => ({ authorization: `Bearer ${LoginResponse.parse(await (await post("/api/login", { userId, pin })).json()).token}` });
+  const get = (path: string, h: Record<string, string>) => fetch(`${base}${path}`, { headers: h });
+  type Po = { id: string; status: string; lines: Array<{ productId: string; qtyOrdered: number; qtyReceived: number }> };
+  const stock = async (h: Record<string, string>, id: string) => ((await (await get("/api/stock", h)).json()) as { levels: Array<{ productId: string; warehouse: number }> }).levels.find((l) => l.productId === id)!;
+  const receiveGoods = (h: Record<string, string>, id: string, lines: Array<{ productId: string; qty: number }>, note?: string, key = uuid()) =>
+    post(`/api/purchase-orders/${id}/receive`, { idempotencyKey: key, lines, note }, h);
+
+  it("lists purchase orders waiting to be received, only to roles with warehouse access", async () => {
+    const wh = await as("u-warehouse", "3333");
+    const list = (await (await get("/api/purchase-orders", wh)).json()) as { purchaseOrders: Po[] };
+    expect(list.purchaseOrders.map((p) => p.id)).toContain("PO-0001");
+    expect((await get("/api/purchase-orders", await as("u-cashier", "1111"))).status).toBe(403);
+  });
+
+  it("refuses more than the order allows, an item not on the order, and leaving a line out", async () => {
+    const wh = await as("u-warehouse", "3333");
+    expect((await receiveGoods(wh, "PO-0001", [{ productId: "p1", qty: 51 }, { productId: "p2", qty: 0 }])).status).toBe(400); // over the order, no allowance configured
+    expect((await receiveGoods(wh, "PO-0001", [{ productId: "p1", qty: 10 }]))).toMatchObject({ status: 400 }); // the cable line was left out
+    expect((await receiveGoods(wh, "PO-0001", [{ productId: "p1", qty: 10 }, { productId: "p2", qty: 5 }, { productId: "p9", qty: 1 }])).status).toBe(400); // not on this order
+    expect((await receiveGoods(await as("u-cashier", "1111"), "PO-0001", [{ productId: "p1", qty: 1 }, { productId: "p2", qty: 0 }])).status).toBe(403); // no warehouse rights
+  });
+
+  it("receives less than ordered, adds warehouse stock once, and the order stays open for the rest", async () => {
+    const wh = await as("u-warehouse", "3333");
+    const before = await stock(wh, "p1");
+    const key = uuid();
+    const res = await receiveGoods(wh, "PO-0001", [{ productId: "p1", qty: 30 }, { productId: "p2", qty: 100 }], "First truck", key);
+    expect(res.status).toBe(200);
+    const { purchaseOrder } = (await res.json()) as { purchaseOrder: Po };
+    expect(purchaseOrder.status).toBe("partially_received");
+    expect(purchaseOrder.lines.find((l) => l.productId === "p1")).toMatchObject({ qtyOrdered: 50, qtyReceived: 30 });
+    expect(((await (await receiveGoods(wh, "PO-0001", [{ productId: "p1", qty: 30 }, { productId: "p2", qty: 100 }], "First truck", key)).json()) as { duplicate: boolean }).duplicate).toBe(true);
+    expect((await stock(wh, "p1")).warehouse - before.warehouse).toBe(30); // added once
+    const second = (await (await receiveGoods(wh, "PO-0001", [{ productId: "p1", qty: 20 }, { productId: "p2", qty: 0 }])).json()) as { purchaseOrder: Po };
+    expect(second.purchaseOrder.status).toBe("received");
+    expect((await receiveGoods(wh, "PO-0001", [{ productId: "p1", qty: 1 }])).status).toBe(400); // already fully received
+  });
+
+  it("an over-receipt allowance lets a little more than ordered through, still capped", async () => {
+    const tolerant = createMockServer({ overReceiptAllowancePercent: 10 });
+    await new Promise<void>((r) => tolerant.listen(0, r));
+    const tBase = `http://localhost:${(tolerant.address() as AddressInfo).port}`;
+    const tPost = (path: string, body: unknown, headers: Record<string, string> = {}) => fetch(tBase + path, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
+    const wh = { authorization: `Bearer ${LoginResponse.parse(await (await tPost("/api/login", { userId: "u-warehouse", pin: "3333" })).json()).token}` };
+    // PO-0001's charger line asks for 50; 10% allowance permits up to 55.
+    expect((await tPost("/api/purchase-orders/PO-0001/receive", { idempotencyKey: uuid(), lines: [{ productId: "p1", qty: 55 }, { productId: "p2", qty: 100 }] }, wh)).status).toBe(200);
+    expect((await tPost("/api/purchase-orders/PO-0001/receive", { idempotencyKey: uuid(), lines: [{ productId: "p1", qty: 1 }] }, wh)).status).toBe(400); // already over what the allowance covers
+    tolerant.close();
   });
 });
 

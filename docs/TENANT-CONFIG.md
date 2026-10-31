@@ -42,6 +42,7 @@ One validated file per company: `packages/tenant-config/tenant.json` (schema in 
 | `stock.inTransitAlertHours` | whole number | A transfer that has been on the road longer than this many hours appears in the in-transit report (G02). |
 | `stock.shortageRulingHours` | whole number | A shortage still waiting for a ruling after this many hours is marked overdue in the approvals inbox. **A placeholder until the owner decides the real time limit.** |
 | `stock.recountByDifferentPerson` | true or false | When a stock count finds differences, the items that differ must be counted again by a **different person** than the first counter. |
+| `stock.overReceiptAllowancePercent` | whole or decimal number (percent) | A goods receipt (H01) may accept this much more than a purchase order's line asked for (ERPNext's "Over Receipt Allowance"). **A placeholder (0: none) until the owner decides.** |
 | `till.scanRequiredForVariants` | true or false | Items that come in variants (colour, size, power) must be added by **scanning the barcode**, not by tapping a tile, so the wrong variant is not sold by mistake. |
 | `offline.maxOfflineSalesPerTill` | whole number | Most unsynced sales a till may hold before it blocks new sales. |
 | `offline.syncWindowHours` | whole number | How long a sale may wait to sync before the till blocks new sales. |

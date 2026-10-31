@@ -435,6 +435,8 @@ export const CreateStockRequestInput = z.object({
   idempotencyKey: Id,
   lines: z.array(z.object({ productId: z.string(), qty: z.number().int().positive() })).min(1),
   note: z.string().trim().max(300).optional(),
+  /** Ask a sister branch instead of the central warehouse. Absent means the warehouse, as before. */
+  fromBranch: z.string().optional(),
 });
 export type CreateStockRequestInput = z.infer<typeof CreateStockRequestInput>;
 
@@ -445,6 +447,8 @@ export const StockRequest = z.object({
   note: z.string().optional(),
   requestedBy: z.object({ id: z.string(), name: z.string() }),
   requestedAt: z.string(),
+  /** Set when this is a request to a sister branch rather than the warehouse. */
+  fromBranch: z.string().optional(),
 });
 export type StockRequest = z.infer<typeof StockRequest>;
 export const StockRequestsResponse = z.object({ requests: z.array(StockRequest) });
@@ -469,6 +473,8 @@ export const Transfer = z.object({
   /** Units that were sent but not received. A shortage is flagged against the transfer, never hidden. */
   shortage: z.number().int().nonnegative(),
   receiveNote: z.string().optional(),
+  /** Set when this transfer was sent by a sister branch rather than the warehouse. */
+  fromBranch: z.string().optional(),
 });
 export type Transfer = z.infer<typeof Transfer>;
 export const TransfersResponse = z.object({ transfers: z.array(Transfer) });
@@ -476,7 +482,11 @@ export type TransfersResponse = z.infer<typeof TransfersResponse>;
 export const TransferResponse = z.object({ transfer: Transfer, duplicate: z.boolean() });
 export type TransferResponse = z.infer<typeof TransferResponse>;
 
-/** The warehouse picks and packs a requested stock order and sends it. It may send less than was asked for. */
+/** Sister branches that may be asked for stock (never the caller's own branch). */
+export const BranchesResponse = z.object({ branches: z.array(z.string()) });
+export type BranchesResponse = z.infer<typeof BranchesResponse>;
+
+/** The warehouse, or a sister branch, picks and packs a requested stock order and sends it. It may send less than was asked for. */
 export const DispatchInput = z.object({
   idempotencyKey: Id,
   requestId: z.string(),
@@ -493,7 +503,11 @@ export const ReceiveInput = z.object({
 });
 export type ReceiveInput = z.infer<typeof ReceiveInput>;
 
-export const StockLevel = z.object({ productId: z.string(), name: z.string(), sku: z.string(), barcode: z.string(), branch: z.number().int(), warehouse: z.number().int() });
+export const StockLevel = z.object({
+  productId: z.string(), name: z.string(), sku: z.string(), barcode: z.string(), branch: z.number().int(), warehouse: z.number().int(),
+  /** Quantity held by each sister branch (name -> qty), excluding the caller's own branch and the warehouse. */
+  branches: z.record(z.string(), z.number().int()),
+});
 export type StockLevel = z.infer<typeof StockLevel>;
 export const StockLevelsResponse = z.object({ asOf: z.string(), levels: z.array(StockLevel) });
 export type StockLevelsResponse = z.infer<typeof StockLevelsResponse>;
@@ -564,6 +578,46 @@ export const WriteOffRequestInput = z.object({ idempotencyKey: Id, note: z.strin
 export type WriteOffRequestInput = z.infer<typeof WriteOffRequestInput>;
 export const WriteOffRequestResponse = z.object({ count: StockCount, approval: Approval, duplicate: z.boolean() });
 export type WriteOffRequestResponse = z.infer<typeof WriteOffRequestResponse>;
+
+/* ───────────── Goods receipt from a supplier (H01) ───────────── */
+
+/** A line of a purchase order. qtyReceived is cumulative across every receipt made against this order so far. */
+export const PurchaseOrderLine = z.object({
+  productId: z.string(), name: z.string(), qtyOrdered: z.number().int().positive(), qtyReceived: z.number().int().nonnegative(),
+});
+export type PurchaseOrderLine = z.infer<typeof PurchaseOrderLine>;
+
+export const PurchaseOrderStatus = z.enum(["open", "partially_received", "received"]);
+export type PurchaseOrderStatus = z.infer<typeof PurchaseOrderStatus>;
+
+/** Raising and approving a purchase order is a later screen (R01); orders arrive here already open, from a supplier. */
+export const PurchaseOrder = z.object({
+  id: z.string(),
+  supplierName: z.string(),
+  /** The supplier's own order or invoice number, free text. */
+  reference: z.string().optional(),
+  status: PurchaseOrderStatus,
+  lines: z.array(PurchaseOrderLine),
+  createdAt: z.string(),
+});
+export type PurchaseOrder = z.infer<typeof PurchaseOrder>;
+export const PurchaseOrdersResponse = z.object({ purchaseOrders: z.array(PurchaseOrder) });
+export type PurchaseOrdersResponse = z.infer<typeof PurchaseOrdersResponse>;
+export const PurchaseOrderResponse = z.object({ purchaseOrder: PurchaseOrder, duplicate: z.boolean() });
+export type PurchaseOrderResponse = z.infer<typeof PurchaseOrderResponse>;
+
+/**
+ * What arrived from a supplier against one purchase order, scanned as it comes off the truck. Receiving less than
+ * ordered is normal (the rest may arrive in a later receipt); receiving more than the order plus the configured
+ * over-receipt allowance is refused.
+ */
+export const GoodsReceiptInput = z.object({
+  idempotencyKey: Id,
+  purchaseOrderId: z.string(),
+  lines: z.array(z.object({ productId: z.string(), qty: z.number().int().nonnegative() })).min(1),
+  note: z.string().trim().max(300).optional(),
+});
+export type GoodsReceiptInput = z.infer<typeof GoodsReceiptInput>;
 
 /* ───────────── Sprint 4: delivery ───────────── */
 

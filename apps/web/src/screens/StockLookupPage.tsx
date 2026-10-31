@@ -51,6 +51,9 @@ export function StockLookupPage() {
               <div className="min-w-0 flex-1"><p className="font-semibold">{l.name}</p><p className="tabular text-text-muted">{l.sku}</p></div>
               <p><span className="text-text-muted">{t("lookup.shelf")} </span><span className="tabular font-bold">{l.branch}</span></p>
               <p><span className="text-text-muted">{t("lookup.warehouse")} </span><span className="tabular font-bold">{l.warehouse}</span></p>
+              {Object.entries(l.branches).map(([name, qty]) => (
+                <p key={name}><span className="text-text-muted">{name} </span><span className="tabular font-bold">{qty}</span></p>
+              ))}
               {l.branch <= LOW && <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-warning-subtle px-3 py-1 font-semibold text-warning-ink"><AlertTriangle className="h-4 w-4" aria-hidden="true" />{t("lookup.low")}</span>}
             </Card>
           </li>

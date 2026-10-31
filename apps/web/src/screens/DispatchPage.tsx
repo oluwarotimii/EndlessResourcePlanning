@@ -13,11 +13,12 @@ import { ScanBox } from "../ui/ScanBox";
 import { StockStatusBadge } from "../ui/StockStatusBadge";
 
 /**
- * H03. Pack and send stock. Pick a request, scan each item as it is packed, then send. The warehouse may send less than was
- * asked for. Works offline: the dispatch is queued with an idempotency key and sent when the connection returns.
+ * H03. Pack and send stock. Pick a request, scan each item as it is packed, then send. The warehouse, or a sister
+ * branch, may send less than was asked for. Works offline: the dispatch is queued with an idempotency key and sent
+ * when the connection returns. Only someone at the branch a request is addressed to may send its stock.
  */
 export function DispatchPage() {
-  const { api, token } = useSession();
+  const { api, token, caps } = useSession();
   const sync = useSync();
   const { data, stale, failed, retry, update } = useCachedReport<{ requests: StockRequest[] }>("stock-requests", (tk) => api.stockRequests(tk));
   const [products, setProducts] = useState<Product[]>([]);
@@ -40,7 +41,8 @@ export function DispatchPage() {
     return () => { live = false; };
   }, [api, token, sync.storage, sync.state]);
 
-  const waiting = data?.requests.filter((r) => r.status === "requested") ?? [];
+  // Only requests this device can actually fulfill: a warehouse-tied officer sees warehouse-bound ones, a branch sees its own.
+  const waiting = data?.requests.filter((r) => r.status === "requested" && (r.fromBranch ? r.fromBranch === caps?.scope.branch : !!caps?.scope.warehouse)) ?? [];
   const totalPicked = Object.values(picked).reduce((n, v) => n + v, 0);
 
   const start = (r: StockRequest) => { setOpen(r); setPicked({}); setMessage(null); setDone(false); };
@@ -93,6 +95,7 @@ export function DispatchPage() {
                 <Card className="space-y-2 p-4" data-testid={`request-${r.id}`}>
                   <div className="flex flex-wrap items-center justify-between gap-2"><p className="tabular font-bold">{r.id}</p><StockStatusBadge status={r.status} /></div>
                   <p className="text-text-muted">{t("stock.by", { name: r.requestedBy.name, time: ago(r.requestedAt) })}</p>
+                  {r.fromBranch && <p className="text-text-muted">{t("stock.source", { name: r.fromBranch })}</p>}
                   <ul className="tabular">{r.lines.map((l) => <li key={l.productId}>{l.qty} × {l.name}</li>)}</ul>
                   {r.note && <p className="text-text-muted">{r.note}</p>}
                   <Button till className="w-full" onClick={() => start(r)}>{t("dispatch.open")}</Button>

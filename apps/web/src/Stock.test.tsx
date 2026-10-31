@@ -2,7 +2,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { Capabilities, DispatchInput, InTransitReport, ReceiveInput, StockLevel, StockRequest, Transfer } from "@erp/api-contract";
+import type { Capabilities, DispatchInput, GoodsReceiptInput, InTransitReport, PurchaseOrder, ReceiveInput, StockLevel, StockRequest, Transfer } from "@erp/api-contract";
 import { areasForRoles } from "@erp/permissions";
 import { createMemoryStorage, type Storage } from "@erp/offline";
 import { loadTenant } from "@erp/tenant-config";
@@ -12,9 +12,10 @@ import { ApiFailure, type ApiClient } from "./api/client";
 import { TenantProvider } from "./state/tenant";
 
 const tenant = loadTenant(tenantJson);
-const caps = (id: string, name: string, role: string): Capabilities => ({ user: { id, name }, roles: [role], areas: areasForRoles([role]), scope: { branch: "Pilot Branch" } });
-const WAREHOUSE = caps("u-warehouse", "Ngozi Eze", "Warehouse officer");
+const caps = (id: string, name: string, role: string, branch = "Pilot Branch", warehouse?: string): Capabilities => ({ user: { id, name }, roles: [role], areas: areasForRoles([role]), scope: { branch, warehouse } });
+const WAREHOUSE = caps("u-warehouse", "Ngozi Eze", "Warehouse officer", "Pilot Branch", "Main Warehouse");
 const MANAGER = caps("u-manager", "Tunde Bello", "Branch manager");
+const SISTER_WAREHOUSE = caps("u-warehouse2", "Bayo Fashola", "Warehouse officer", "Victoria Island Branch");
 const PRODUCTS = [
   { id: "p1", sku: "CHG-20W", barcode: "6001000000011", name: "Phone charger 20W", price: 6500, stock: 40 },
   { id: "p2", sku: "CBL-USBC", barcode: "6001000000028", name: "USB-C cable 1m", price: 2500, stock: 120 },
@@ -24,24 +25,31 @@ function fakeServer(who: Capabilities) {
   const unused = async () => { throw new Error("not used"); };
   const s = {
     down: false, dispatched: [] as DispatchInput[], received: [] as Array<{ id: string; input: ReceiveInput }>,
-    requests: [{ id: "SR-0001", status: "requested", lines: [{ productId: "p1", name: "Phone charger 20W", qty: 4 }, { productId: "p2", name: "USB-C cable 1m", qty: 3 }], note: "Weekend rush", requestedBy: { id: "u-manager", name: "Tunde Bello" }, requestedAt: new Date(Date.now() - 3_600_000).toISOString() }] as StockRequest[],
+    requests: [
+      { id: "SR-0001", status: "requested", lines: [{ productId: "p1", name: "Phone charger 20W", qty: 4 }, { productId: "p2", name: "USB-C cable 1m", qty: 3 }], note: "Weekend rush", requestedBy: { id: "u-manager", name: "Tunde Bello" }, requestedAt: new Date(Date.now() - 3_600_000).toISOString() },
+      { id: "SR-0002", status: "requested", lines: [{ productId: "p1", name: "Phone charger 20W", qty: 2 }], requestedBy: { id: "u-manager", name: "Tunde Bello" }, requestedAt: new Date(Date.now() - 1_800_000).toISOString(), fromBranch: "Victoria Island Branch" },
+    ] as StockRequest[],
     transfers: [{ id: "TR-0001", requestId: "SR-0001", status: "in_transit", lines: [{ productId: "p1", name: "Phone charger 20W", qtySent: 4 }, { productId: "p2", name: "USB-C cable 1m", qtySent: 3 }], dispatchedBy: { id: "u-warehouse", name: "Ngozi Eze" }, dispatchedAt: new Date(Date.now() - 2 * 3_600_000).toISOString(), shortage: 0 }] as Transfer[],
-    levels: [{ productId: "p1", name: "Phone charger 20W", sku: "CHG-20W", barcode: "6001000000011", branch: 3, warehouse: 120 }, { productId: "p2", name: "USB-C cable 1m", sku: "CBL-USBC", barcode: "6001000000028", branch: 80, warehouse: 360 }] as StockLevel[],
+    levels: [{ productId: "p1", name: "Phone charger 20W", sku: "CHG-20W", barcode: "6001000000011", branch: 3, warehouse: 120, branches: { "Victoria Island Branch": 10 } }, { productId: "p2", name: "USB-C cable 1m", sku: "CBL-USBC", barcode: "6001000000028", branch: 80, warehouse: 360, branches: { "Victoria Island Branch": 0 } }] as StockLevel[],
+    branches: ["Victoria Island Branch"],
     report: { asOf: "2026-11-02T10:00:00.000Z", thresholdHours: 24, rows: [{ transferId: "TR-0009", dispatchedBy: "Ngozi Eze", dispatchedAt: "2026-11-01T08:00:00.000Z", hoursInTransit: 26, units: 12 }] } as InTransitReport,
     levelQueries: [] as string[],
+    purchaseOrders: [{ id: "PO-0001", supplierName: "Lagos Electronics Distributors", reference: "INV-88213", status: "open", lines: [{ productId: "p1", name: "Phone charger 20W", qtyOrdered: 4, qtyReceived: 0 }, { productId: "p2", name: "USB-C cable 1m", qtyOrdered: 3, qtyReceived: 0 }], createdAt: new Date(Date.now() - 3_600_000).toISOString() }] as PurchaseOrder[],
+    goodsReceived: [] as Array<{ id: string; input: GoodsReceiptInput }>,
   };
   const down = () => { if (s.down) throw new ApiFailure("unavailable", "unavailable"); };
   const api: ApiClient = {
     users: async () => ({ deviceBranch: "Pilot Branch", users: [] }), login: unused, capabilities: async () => who, tasks: async () => ({ tasks: [] }), logout: async () => undefined,
     products: async () => ({ products: PRODUCTS, asOf: "x" }), customers: async () => ({ customers: [] }), createSale: unused, openShift: unused, closeShift: unused, logPrint: async () => undefined,
     approvals: async () => ({ approvals: [] }), createApproval: unused, decideApproval: unused, summary: unused, cashUpVariance: unused, lookupSale: unused, createReturn: unused, createStockRequest: unused,
+    branches: async () => { down(); return { branches: s.branches.filter((b) => b !== who.scope.branch) }; },
     stockRequests: async () => { down(); return { requests: s.requests }; },
     transfers: async () => { down(); return { transfers: s.transfers }; },
     dispatchTransfer: async (_t, input) => {
       down(); s.dispatched.push(input);
       const request = s.requests.find((r) => r.id === input.requestId)!;
       request.status = "dispatched";
-      const transfer: Transfer = { id: "TR-0002", requestId: request.id, status: "in_transit", lines: input.lines.map((l) => ({ productId: l.productId, name: PRODUCTS.find((p) => p.id === l.productId)!.name, qtySent: l.qty })), dispatchedBy: { id: who.user.id, name: who.user.name }, dispatchedAt: new Date().toISOString(), shortage: 0 };
+      const transfer: Transfer = { id: "TR-0003", requestId: request.id, status: "in_transit", lines: input.lines.map((l) => ({ productId: l.productId, name: PRODUCTS.find((p) => p.id === l.productId)!.name, qtySent: l.qty })), dispatchedBy: { id: who.user.id, name: who.user.name }, dispatchedAt: new Date().toISOString(), shortage: 0, fromBranch: request.fromBranch };
       return { transfer, duplicate: false };
     },
     receiveTransfer: async (_t, id, input) => {
@@ -52,6 +60,14 @@ function fakeServer(who: Capabilities) {
       return { transfer, duplicate: false };
     },
     stockLevels: async (_t, q = "") => { down(); s.levelQueries.push(q); return { asOf: "now", levels: s.levels.filter((l) => l.name.toLowerCase().includes(q.toLowerCase())) }; },
+    purchaseOrders: async () => { down(); return { purchaseOrders: s.purchaseOrders }; },
+    receiveGoods: async (_t, id, input) => {
+      down(); s.goodsReceived.push({ id, input });
+      const po = s.purchaseOrders.find((x) => x.id === id)!;
+      const newLines = po.lines.map((l) => ({ ...l, qtyReceived: l.qtyReceived + (input.lines.find((x) => x.productId === l.productId)?.qty ?? 0) }));
+      Object.assign(po, { lines: newLines, status: newLines.every((l) => l.qtyReceived >= l.qtyOrdered) ? "received" : newLines.some((l) => l.qtyReceived > 0) ? "partially_received" : "open" });
+      return { purchaseOrder: po, duplicate: false };
+    },
     countSheet: async () => { throw new Error("not used"); }, counts: async () => { throw new Error("not used"); }, submitCount: async () => { throw new Error("not used"); }, deliveryOrders: async () => { throw new Error("not used"); }, riders: async () => { throw new Error("not used"); }, assignDelivery: async () => { throw new Error("not used"); }, proveDelivery: async () => { throw new Error("not used"); }, remitCash: async () => { throw new Error("not used"); }, codOutstanding: async () => { throw new Error("not used"); }, requestWriteOff: async () => { throw new Error("not used"); }, inTransitReport: async () => { down(); return s.report; },
   };
   return { api, s };
@@ -122,6 +138,36 @@ describe("pack and send stock (H03)", () => {
   });
 });
 
+describe("branch-to-branch stock request", () => {
+  it("a request addressed to a sister branch is not offered to the warehouse's own officer", async () => {
+    const { api } = fakeServer(WAREHOUSE);
+    mount(api, WAREHOUSE, "/s/H03");
+    await screen.findByTestId("request-SR-0001");
+    expect(screen.queryByTestId("request-SR-0002")).not.toBeInTheDocument(); // addressed to Victoria Island Branch, not the warehouse
+  });
+
+  it("only the sister branch's own officer can pack and send a request addressed to it", async () => {
+    const { api, s } = fakeServer(SISTER_WAREHOUSE);
+    mount(api, SISTER_WAREHOUSE, "/s/H03");
+    const card = await screen.findByTestId("request-SR-0002");
+    expect(within(card).getByText("From Victoria Island Branch")).toBeInTheDocument();
+    expect(screen.queryByTestId("request-SR-0001")).not.toBeInTheDocument(); // that one is the warehouse's to pack
+    fireEvent.click(within(card).getByRole("button", { name: "Pack this request" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Pack one more Phone charger 20W" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send to the branch (1)" }));
+    await waitFor(() => expect(s.dispatched).toHaveLength(1));
+    expect(s.dispatched[0]).toMatchObject({ requestId: "SR-0002", lines: [{ productId: "p1", qty: 1 }] });
+  });
+
+  it("the receiving screen shows which sister branch sent a transfer", async () => {
+    const { api, s } = fakeServer(MANAGER);
+    s.transfers.push({ id: "TR-0004", requestId: "SR-0002", status: "in_transit", lines: [{ productId: "p1", name: "Phone charger 20W", qtySent: 1 }], dispatchedBy: { id: "u-warehouse2", name: "Bayo Fashola" }, dispatchedAt: new Date().toISOString(), shortage: 0, fromBranch: "Victoria Island Branch" });
+    mount(api, MANAGER, "/s/H04");
+    const card = await screen.findByTestId("transfer-TR-0004");
+    expect(within(card).getByText("From Victoria Island Branch")).toBeInTheDocument();
+  });
+});
+
 describe("receive stock (H04)", () => {
   it("counts what arrived by scanning, shows what is missing, and flags the shortage on the transfer", async () => {
     const { api, s } = fakeServer(MANAGER);
@@ -166,12 +212,59 @@ describe("receive stock (H04)", () => {
   });
 });
 
+describe("goods receipt (H01)", () => {
+  it("counts what arrived against the purchase order, allows less than ordered, and stock is added once", async () => {
+    const { api, s } = fakeServer(WAREHOUSE);
+    mount(api, WAREHOUSE, "/s/H01");
+    const card = await screen.findByTestId("po-PO-0001");
+    expect(within(card).getByText(/Lagos Electronics Distributors/)).toBeInTheDocument();
+    expect(within(card).getByText(/Ref INV-88213/)).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole("button", { name: "Receive this order" }));
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+    scan("6001000000011"); scan("6001000000011"); scan("6001000000011"); // 3 of the 4 chargers ordered
+    scan("6001000000028"); scan("6001000000028"); scan("6001000000028"); // all 3 cables ordered
+    expect(await screen.findByTestId("left")).toHaveTextContent("Still to come: 1. The rest may arrive in a later delivery.");
+    fireEvent.change(screen.getByLabelText(/note \(optional\)/i), { target: { value: "One box did not make it on the truck" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirm what arrived" }));
+    await waitFor(() => expect(s.goodsReceived).toHaveLength(1));
+    expect(s.goodsReceived[0]).toMatchObject({ id: "PO-0001", input: { lines: [{ productId: "p1", qty: 3 }, { productId: "p2", qty: 3 }], note: "One box did not make it on the truck" } });
+    expect(screen.queryByTestId("po-PO-0001")).not.toBeInTheDocument(); // still open (the charger line is short), but moved to partially received
+  });
+
+  it("cannot receive more than was ordered, and when everything is there it says so", async () => {
+    const { api } = fakeServer(WAREHOUSE);
+    mount(api, WAREHOUSE, "/s/H01");
+    fireEvent.click(await screen.findByRole("button", { name: "Receive this order" }));
+    const more = await screen.findByRole("button", { name: "One more USB-C cable 1m" });
+    fireEvent.click(more); fireEvent.click(more); fireEvent.click(more);
+    expect(more).toBeDisabled();
+    for (let i = 0; i < 4; i++) fireEvent.click(screen.getByRole("button", { name: "One more Phone charger 20W" }));
+    expect(screen.getByTestId("left")).toHaveTextContent("Everything on this order has arrived.");
+  });
+
+  it("a purchase order already partly received shows what is left, and drops off once fully received", async () => {
+    const { api, s } = fakeServer(WAREHOUSE);
+    s.purchaseOrders.push({ id: "PO-0002", supplierName: "Lekki Gadget Hub", status: "partially_received", lines: [{ productId: "p1", name: "Phone charger 20W", qtyOrdered: 4, qtyReceived: 3 }], createdAt: new Date().toISOString() });
+    mount(api, WAREHOUSE, "/s/H01");
+    const card = await screen.findByTestId("po-PO-0002");
+    expect(within(card).getByText("3 / 4 × Phone charger 20W")).toBeInTheDocument();
+    fireEvent.click(within(card).getByRole("button", { name: "Receive this order" }));
+    fireEvent.click(await screen.findByRole("button", { name: "One more Phone charger 20W" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm what arrived" }));
+    await waitFor(() => expect(s.goodsReceived).toHaveLength(1));
+    expect(await screen.findByText("Received. If you are offline, it is sent when you are online again.")).toBeInTheDocument();
+    expect(screen.queryByTestId("po-PO-0002")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("received-PO-0002")).toBeInTheDocument();
+  });
+});
+
 describe("stock lookup (H05) and in-transit report (G02)", () => {
   it("shows shelf and warehouse quantities, flags low stock, and searches", async () => {
     const { api, s } = fakeServer(WAREHOUSE);
     mount(api, WAREHOUSE, "/s/H05");
     const low = await screen.findByTestId("level-p1");
     expect(within(low).getByText("Low")).toBeInTheDocument();
+    expect(within(low).getByText("Victoria Island Branch")).toBeInTheDocument();
     expect(within(screen.getByTestId("level-p2")).queryByText("Low")).not.toBeInTheDocument();
     fireEvent.change(screen.getByPlaceholderText(/search by name/i), { target: { value: "cable" } });
     await waitFor(() => expect(screen.queryByTestId("level-p1")).not.toBeInTheDocument());

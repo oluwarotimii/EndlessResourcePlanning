@@ -22,7 +22,7 @@
   "returns": { "reasons": ["Faulty item", "Wrong item supplied", "Customer changed their mind", "Damaged in transit", "Other"],
     "rules": { "defaultDays": 7, "faultyDays": 30, "faultyReasons": ["Faulty item", "Damaged in transit"], "byCategory": { "Audio": { "days": 3 } }, "byProduct": {} } },
   "delivery": { "failedReasons": ["Customer not reachable", "Wrong address", "Customer refused", "Item damaged", "Other"], "codRemitHours": 24 },
-  "stock": { "inTransitAlertHours": 24, "shortageRulingHours": 48, "recountByDifferentPerson": true },
+  "stock": { "inTransitAlertHours": 24, "shortageRulingHours": 48, "recountByDifferentPerson": true, "overReceiptAllowancePercent": 0 },
   "offline": { "maxOfflineSalesPerTill": 50, "syncWindowHours": 12 },
   "security": { "idleLockMinutes": 5 },
   "touch": { "minPx": 48, "tillPx": 56 }

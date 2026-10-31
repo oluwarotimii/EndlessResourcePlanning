@@ -11,8 +11,11 @@ The product uses everyday words. Staff should understand every label without tra
 - **Credit sale.** The customer takes the goods and pays later. Recorded as money the customer owes, limited by their credit limit.
 - **Approval.** A decision by someone other than the requester for an exception: a discount, a void, a sale over a credit limit, a refund, a closing balance.
 - **Refund / return.** A customer gives goods back and gets money (or a reduction of what they owe) back. Needs approval.
-- **Stock request.** A branch asking the warehouse for stock (screen H02).
-- **Transfer / dispatch.** The warehouse packing and sending the requested stock to the branch. While it is on the road it is **in transit**.
+- **Purchase order.** An order placed with a supplier for goods to arrive at the warehouse. Raising one is a later screen (R01); it arrives at goods receipt already placed.
+- **Goods receipt.** The warehouse scanning and counting what a supplier actually delivered against a purchase order (screen H01). Receiving less than ordered is normal; the rest may come later.
+- **Stock request.** A branch asking the warehouse, or a sister branch, for stock (screen H02).
+- **Sister branch.** Another branch of the same company that can be asked for stock directly, instead of going through the warehouse.
+- **Transfer / dispatch.** The warehouse, or a sister branch, packing and sending the requested stock. While it is on the road it is **in transit**.
 - **Receiving.** The branch counting what arrived and confirming it.
 - **Shortage.** Items that were sent but not counted at the branch. It is flagged on the transfer.
 - **Ruling (missing stock).** A decision by someone independent of the branch on who bears the cost of stock that went missing in transit: the branch, the warehouse, or the transport. Nothing is charged until it is made.

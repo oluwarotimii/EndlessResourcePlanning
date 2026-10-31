@@ -96,6 +96,7 @@ export function ReceiveTransferPage() {
                 <Card className="space-y-2 p-4" data-testid={`transfer-${x.id}`}>
                   <p className="tabular text-lg font-bold">{x.id}</p>
                   <p className="text-text-muted">{t("receive.from", { name: x.dispatchedBy.name, ago: ago(x.dispatchedAt) })}</p>
+                  {x.fromBranch && <p className="text-text-muted">{t("stock.source", { name: x.fromBranch })}</p>}
                   <ul className="tabular">{x.lines.map((l) => <li key={l.productId}>{l.qtySent} × {l.name}</li>)}</ul>
                   <Button till className="w-full" onClick={() => start(x)}>{t("receive.open")}</Button>
                 </Card>

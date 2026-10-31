@@ -2,14 +2,14 @@ import http from "node:http";
 import TENANT_JSON from "@erp/tenant-config/tenant.json" with { type: "json" };
 import { randomUUID } from "node:crypto";
 import {
-  ApprovalDecisionInput, CreateApprovalInput, AssignInput, CountSubmitInput, CreateStockRequestInput, ProofInput, RemitInput, DispatchInput, ReceiveInput, WriteOffRequestInput, ReturnInput, refundFor, returnDaysFor, daysSince, type ReturnRules, LoginRequest, PrintLogInput, SaleInput, ShiftCloseInput, ShiftOpenInput,
+  ApprovalDecisionInput, CreateApprovalInput, AssignInput, CountSubmitInput, CreateStockRequestInput, GoodsReceiptInput, ProofInput, RemitInput, DispatchInput, ReceiveInput, WriteOffRequestInput, ReturnInput, refundFor, returnDaysFor, daysSince, type ReturnRules, LoginRequest, PrintLogInput, SaleInput, ShiftCloseInput, ShiftOpenInput,
   cashOf, computeTotals, creditOf, discountAmount,
-  type ApiError, type Approval, type Capabilities, type Customer, type Product, type ReturnRecord, type Sale, type DeliveryOrder, type StockCount, type StockRequest, type Transfer, type Shift, type VatMode,
+  type ApiError, type Approval, type Capabilities, type Customer, type Product, type PurchaseOrder, type ReturnRecord, type Sale, type DeliveryOrder, type StockCount, type StockRequest, type Transfer, type Shift, type VatMode,
 } from "@erp/api-contract";
 import { APPROVAL_ROUTING, approvalThreshold, areasForRoles, can, currentStep, decidedEarlier, mayApproveKind, mayDecideApproval, mayViewApproval, stepsFor, withinApprovalLimitFor, type ApprovalRouting } from "@erp/permissions";
-import { APPROVALS, COST_PRICE, DELIVERY_ORDERS, CUSTOMERS, PRODUCTS, TASKS, USERS, type MockUser } from "./fixtures";
+import { APPROVALS, BRANCH_STOCK, COST_PRICE, DELIVERY_ORDERS, CUSTOMERS, PRODUCTS, PURCHASE_ORDERS, TASKS, USERS, type MockUser } from "./fixtures";
 
-export interface MockOptions { latencyMs?: number; vatRate?: number; vatMode?: VatMode; /** Who decides each kind of approval; defaults to data/approval-routing.json. */ routing?: ApprovalRouting; /** Clock for tests, in milliseconds. */ now?: () => number; /** Hours before a transfer in transit is reported. */ inTransitAlertHours?: number; /** Items that differ must be recounted by someone other than the first counter. */ recountByDifferentPerson?: boolean; /** Hours before collected delivery cash that has not been handed in is overdue. */ codRemitHours?: number; /** Days a return is accepted, by product, category and reason. Defaults to the tenant settings. */ returnRules?: ReturnRules }
+export interface MockOptions { latencyMs?: number; vatRate?: number; vatMode?: VatMode; /** Who decides each kind of approval; defaults to data/approval-routing.json. */ routing?: ApprovalRouting; /** Clock for tests, in milliseconds. */ now?: () => number; /** Hours before a transfer in transit is reported. */ inTransitAlertHours?: number; /** Items that differ must be recounted by someone other than the first counter. */ recountByDifferentPerson?: boolean; /** Hours before collected delivery cash that has not been handed in is overdue. */ codRemitHours?: number; /** Days a return is accepted, by product, category and reason. Defaults to the tenant settings. */ returnRules?: ReturnRules; /** Extra percentage over a purchase order's ordered quantity that a goods receipt may still accept. */ overReceiptAllowancePercent?: number }
 
 /**
  * Stand-in for ERPNext until the adapter exists. It deliberately includes the awkward cases:
@@ -17,7 +17,7 @@ export interface MockOptions { latencyMs?: number; vatRate?: number; vatMode?: V
  */
 const TENANT = TENANT_JSON as unknown as { returns: { rules: ReturnRules } };
 
-export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "inclusive", routing = APPROVAL_ROUTING, now = Date.now, inTransitAlertHours = 24, recountByDifferentPerson = true, codRemitHours = 24, returnRules = TENANT.returns.rules }: MockOptions = {}) {
+export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "inclusive", routing = APPROVAL_ROUTING, now = Date.now, inTransitAlertHours = 24, recountByDifferentPerson = true, codRemitHours = 24, returnRules = TENANT.returns.rules, overReceiptAllowancePercent = 0 }: MockOptions = {}) {
   const sessions = new Map<string, MockUser>();
   // In-memory "ERPNext": the idempotency keys make every write safe to retry.
   const products: Product[] = structuredClone(PRODUCTS);
@@ -32,7 +32,12 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
   const losses = new Map<string, { id: string; transferId: string; bearer: string; valueAtCost: number; decidedBy: string; decidedAt: string }>();
   /** Warehouse stock. product.stock is the branch (shelf) stock that sales draw from. */
   const warehouseStock: Record<string, number> = Object.fromEntries(PRODUCTS.map((p) => [p.id, p.stock * 3]));
+  /** Stock held by sister branches. A request may be addressed to one of these instead of the warehouse. */
+  const branchStock: Record<string, Record<string, number>> = structuredClone(BRANCH_STOCK);
   const transfers = new Map<string, Transfer>();
+  /** Purchase orders waiting to be received from a supplier (H01). Raising one is a later screen (R01). */
+  const purchaseOrders = new Map<string, PurchaseOrder>(structuredClone(PURCHASE_ORDERS).map((po) => [po.id, po]));
+  const goodsReceiptKeys = new Map<string, string>(); // idempotency key -> purchase order id
   /** Physical counts. Lines keep the expected quantity on the server; the counter never sees it until the count is final. */
   const counts = new Map<string, StockCount>();
   const countKeys = new Map<string, string>(); // idempotency key -> count id
@@ -277,7 +282,12 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
       approvalUses.set(approval.id, input.idempotencyKey);
       return send(res, 200, { ret, duplicate: false });
     }
-    // Branch stock requests (H02): the branch asks the warehouse for stock. Dispatch and receiving come in Sprint 4.
+    // Branches a request can be sent to instead of the warehouse (H02).
+    if (req.method === "GET" && url.pathname === "/api/branches") {
+      if (!can(caps(user), "Warehouse", "V")) return fail(res, 403, "forbidden", "Your role cannot see other branches.");
+      return send(res, 200, { branches: Object.keys(branchStock).filter((b) => b !== user.branch) });
+    }
+    // Branch stock requests (H02): the branch asks the warehouse, or a sister branch, for stock.
     if (req.method === "GET" && url.pathname === "/api/stock-requests") {
       if (!can(caps(user), "Warehouse", "V")) return fail(res, 403, "forbidden", "Your role cannot see stock requests.");
       return send(res, 200, { requests: [...stockRequests.values()].sort((a, b) => b.requestedAt.localeCompare(a.requestedAt)) });
@@ -289,6 +299,10 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
       const input = parsed.data;
       const existing = stockRequestKeys.get(input.idempotencyKey);
       if (existing) return send(res, 200, { request: stockRequests.get(existing), duplicate: true }); // a retry never raises two requests
+      if (input.fromBranch) {
+        if (input.fromBranch === user.branch) return fail(res, 400, "validation", "You cannot request stock from your own branch.");
+        if (!branchStock[input.fromBranch]) return fail(res, 400, "validation", "That branch does not exist.");
+      }
       const lines = [];
       for (const l of input.lines) {
         const product = products.find((p) => p.id === l.productId);
@@ -297,7 +311,7 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
       }
       const request: StockRequest = {
         id: `SR-${String(stockRequests.size + 1).padStart(4, "0")}`, status: "requested", lines, note: input.note,
-        requestedBy: { id: user.id, name: user.name }, requestedAt: new Date().toISOString(),
+        requestedBy: { id: user.id, name: user.name }, requestedAt: new Date().toISOString(), fromBranch: input.fromBranch,
       };
       stockRequests.set(request.id, request);
       stockRequestKeys.set(input.idempotencyKey, request.id);
@@ -319,17 +333,23 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
       if (!request) return fail(res, 400, "validation", "That stock request does not exist.");
       if (request.status !== "requested") return fail(res, 400, "validation", "That request has already been dispatched.");
       if (request.requestedBy.id === user.id) return fail(res, 403, "forbidden", "You cannot dispatch a request you raised.");
+      // A request addressed to a sister branch can only be sent by someone at that branch; a warehouse-bound one, by someone tied to the warehouse.
+      if (request.fromBranch ? request.fromBranch !== user.branch : !user.warehouse) {
+        return fail(res, 403, "forbidden", request.fromBranch ? "Only someone at that branch can send its stock." : "Only the warehouse can send its stock.");
+      }
+      const source = request.fromBranch ? (branchStock[request.fromBranch] ??= {}) : warehouseStock;
+      const sourceName = request.fromBranch ?? "the warehouse";
       const lines = [];
       for (const l of input.lines) {
         const asked = request.lines.find((x) => x.productId === l.productId);
         if (!asked || l.qty > asked.qty) return fail(res, 400, "validation", "You cannot send more than was asked for.");
-        if (l.qty > (warehouseStock[l.productId] ?? 0)) return fail(res, 400, "validation", `Only ${warehouseStock[l.productId] ?? 0} of ${asked.name} in the warehouse.`);
+        if (l.qty > (source[l.productId] ?? 0)) return fail(res, 400, "validation", `Only ${source[l.productId] ?? 0} of ${asked.name} in ${sourceName}.`);
         lines.push({ productId: l.productId, name: asked.name, qtySent: l.qty });
       }
-      for (const l of lines) warehouseStock[l.productId] = (warehouseStock[l.productId] ?? 0) - l.qtySent;
+      for (const l of lines) source[l.productId] = (source[l.productId] ?? 0) - l.qtySent;
       const transfer: Transfer = {
         id: `TR-${String(transfers.size + 1).padStart(4, "0")}`, requestId: request.id, status: "in_transit", lines,
-        dispatchedBy: { id: user.id, name: user.name }, dispatchedAt: new Date(now()).toISOString(), shortage: 0,
+        dispatchedBy: { id: user.id, name: user.name }, dispatchedAt: new Date(now()).toISOString(), shortage: 0, fromBranch: request.fromBranch,
       };
       transfers.set(transfer.id, transfer);
       dispatchKeys.set(input.idempotencyKey, transfer.id);
@@ -376,6 +396,41 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
         });
       }
       return send(res, 200, { transfer, duplicate: false });
+    }
+    // Goods receipt from a supplier (H01), against a purchase order. Raising a purchase order is a later screen (R01).
+    if (req.method === "GET" && url.pathname === "/api/purchase-orders") {
+      if (!can(caps(user), "Warehouse", "V")) return fail(res, 403, "forbidden", "Your role cannot see purchase orders.");
+      return send(res, 200, { purchaseOrders: [...purchaseOrders.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) });
+    }
+    const goodsReceiptRoute = req.method === "POST" && url.pathname.match(/^\/api\/purchase-orders\/([^/]+)\/receive$/);
+    if (goodsReceiptRoute) {
+      if (!can(caps(user), "Warehouse", "C")) return fail(res, 403, "forbidden", "Your role cannot receive stock.");
+      const parsed = GoodsReceiptInput.safeParse({ ...(await readJson(req) as object), purchaseOrderId: decodeURIComponent(goodsReceiptRoute[1] ?? "") });
+      if (!parsed.success) return fail(res, 400, "validation", "Count what arrived.");
+      const input = parsed.data;
+      const seenId = goodsReceiptKeys.get(input.idempotencyKey);
+      if (seenId) return send(res, 200, { purchaseOrder: purchaseOrders.get(seenId), duplicate: true }); // a retry never adds stock twice
+      const po = purchaseOrders.get(input.purchaseOrderId);
+      if (!po) return fail(res, 400, "validation", "That purchase order does not exist.");
+      if (po.status === "received") return fail(res, 400, "validation", "That purchase order has already been fully received.");
+      const open = po.lines.filter((l) => l.qtyReceived < l.qtyOrdered);
+      if (open.some((l) => !input.lines.some((x) => x.productId === l.productId))) {
+        return fail(res, 400, "validation", "Count every item still waiting on this order, even as zero.");
+      }
+      for (const l of input.lines) {
+        const line = po.lines.find((x) => x.productId === l.productId);
+        if (!line) return fail(res, 400, "validation", "One of the items is not on this purchase order.");
+        const max = Math.floor(line.qtyOrdered * (1 + overReceiptAllowancePercent / 100));
+        if (line.qtyReceived + l.qty > max) return fail(res, 400, "validation", `More ${line.name} was counted than the order (plus the allowed extra) permits.`);
+      }
+      for (const l of input.lines) {
+        const line = po.lines.find((x) => x.productId === l.productId)!;
+        line.qtyReceived += l.qty;
+        warehouseStock[l.productId] = (warehouseStock[l.productId] ?? 0) + l.qty;
+      }
+      po.status = po.lines.every((x) => x.qtyReceived >= x.qtyOrdered) ? "received" : po.lines.some((x) => x.qtyReceived > 0) ? "partially_received" : "open";
+      goodsReceiptKeys.set(input.idempotencyKey, po.id);
+      return send(res, 200, { purchaseOrder: po, duplicate: false });
     }
     // Delivery: the dispatch board assigns, the rider proves delivery, the manager confirms the cash handed in.
     const isRider = user.role === "Rider / courier";
@@ -545,7 +600,10 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
       return send(res, 200, {
         asOf: new Date(now()).toISOString(),
         levels: products.filter((p) => !q || p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.barcode.includes(q))
-          .map((p) => ({ productId: p.id, name: p.name, sku: p.sku, barcode: p.barcode, branch: p.stock, warehouse: warehouseStock[p.id] ?? 0 })),
+          .map((p) => ({
+            productId: p.id, name: p.name, sku: p.sku, barcode: p.barcode, branch: p.stock, warehouse: warehouseStock[p.id] ?? 0,
+            branches: Object.fromEntries(Object.entries(branchStock).filter(([b]) => b !== user.branch).map(([b, stock]) => [b, stock[p.id] ?? 0])),
+          })),
       });
     }
     if (req.method === "GET" && url.pathname === "/api/reports/in-transit") {
