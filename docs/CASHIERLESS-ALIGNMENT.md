@@ -9,7 +9,7 @@ This page says, pillar by pillar, how far the current build gets us, what is mis
 | What the proposal asks for | Where we are | What is missing |
 | --- | --- | --- |
 | Customer scans products on a kiosk, phone or handheld | Scanning works (keyboard-wedge scanners, offline). Variants must be scanned, not tapped. | A customer-facing "scan and pay" mode. Today the till is designed for a cashier. |
-| Sales attendant builds the order on their own phone, no paper | Parked sales (S02) and the till already build a cart on a device. A sales rep can already be given till permission, because permissions are given to people. | An **order** that is separate from a **sale**: built on the attendant's phone, then paid on a kiosk or by the customer's phone. |
+| Sales attendant builds the order on their own phone, no paper | **Built (S06 + S02).** The attendant builds an order on a phone or tablet; the cashier picks it up with every line filled in and only takes payment. | Paying it on a kiosk or the customer's own phone (needs the payment step). |
 | The system confirms the order automatically, nothing re-typed | Built: totals, VAT, one write per sale, a retry never posts twice. | Nothing for the pilot. |
 | Payment through Paystack, Flutterwave or OPay, no manual amounts | **Not built.** Today the cashier picks the method and types the amount (decision 9: payment is only recorded). Paystack is planned for Sprint 9. | This is the keystone. Without it the till is a faster cashier, not a cashierless store. |
 | Receipt prints when payment is confirmed | A5 invoice and receipt printing works. The trigger is the cashier. | Print on payment confirmed (and a QR code on the receipt, see below). |
@@ -29,6 +29,20 @@ With no cashier at the door, loss control matters more. These are already built:
 - **Cash-up shrinks** if most sales are paid by card or transfer, but stays for cash sales and cash on delivery.
 - **The cashier role becomes a permission.** A sales attendant, a floor monitor or a manager can hold it. We already built roles that way.
 - **Offline gets harder.** A payment needs the network. When it is down the store needs a fallback (a till with a card terminal, or cash). We keep the cashier till for exactly this.
+
+## The owner's plan: step by step, not zero to a hundred
+The order from the floor comes first and is the **standard way to sell**, even when the cashierless parts arrive. The customer app is added in stages, each one useful on its own:
+
+| Step | What it gives | Depends on | State |
+| --- | --- | --- | --- |
+| 1. Order from the floor | An attendant builds the order on a phone or tablet; the cashier takes payment. No paper, nothing re-typed. | Nothing new | **Built** (S06, S02) |
+| 2. Customer app: search and cart | A customer browses the catalogue and builds their own order (the same order object as step 1). | The same back end | Not built (W02) |
+| 3. Scan in store, pay at the till | The customer scans as they shop on their phone; the order arrives at the cashier like step 1. | Step 2 | Not built |
+| 4. Pay on the phone, store pickup | The customer pays in the app (Paystack, Flutterwave or OPay); the store prepares the order for pickup. | Payment confirmation | Not built |
+| 5. Pay at home, delivery | Same as step 4, delivered (the delivery screens exist). | Step 4 | Not built |
+| 6. Scan and pay and walk out | Self-checkout with an exit check. | Steps 3 and 4 | Not built |
+
+Each step uses the order object that now exists, so nothing is thrown away. The screens for the customer app are built against the mock first; the ERPNext adapter follows (decision 56).
 
 ## Recommended order of work
 

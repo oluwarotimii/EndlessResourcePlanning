@@ -8,12 +8,14 @@ export interface Cart {
   chargeKey?: string;
   /** An approved discount for this sale. Any change to the lines clears it; a new request is needed. */
   discount?: { approvalId: string; percent: number };
+  /** Set when the cart was loaded from an order built on the floor: paying it marks that order paid. */
+  orderId?: string;
   /** An approved credit-over-limit request for this customer. Any edit or customer change clears it. */
   creditApproval?: { approvalId: string; customerId: string; amount: number };
 }
 export const emptyCart = (): Cart => ({ lines: [] });
 
-const edit = (cart: Cart, lines: CartLine[]): Cart => ({ ...cart, lines, chargeKey: undefined, discount: undefined, creditApproval: undefined });
+const edit = (cart: Cart, lines: CartLine[]): Cart => ({ ...cart, lines, chargeKey: undefined, discount: undefined, creditApproval: undefined, orderId: undefined });
 
 export function addProduct(cart: Cart, p: Pick<Product, "id" | "name" | "price">, qty = 1): Cart {
   const found = cart.lines.find((l) => l.productId === p.id);

@@ -27,7 +27,7 @@ function fakeServer(caps: Capabilities) {
     users: async () => ({ deviceBranch: "Pilot Branch", users: [] }), login: unused, capabilities: async () => caps, tasks: async () => ({ tasks: [] }), logout: async () => undefined,
     products: async () => ({ products: PRODUCTS, asOf: "x" }),
     purchaseOrders: async () => ({ purchaseOrders: s.list }),
-    raisePurchaseOrder: async (_t: string, input: CreatePurchaseOrderInput) => {
+    returnInspections: async () => { throw new Error("not used"); }, inspectReturn: async () => { throw new Error("not used"); }, correctVariant: async () => { throw new Error("not used"); }, mixupReport: async () => { throw new Error("not used"); }, orders: async () => { throw new Error("not used"); }, createOrder: async () => { throw new Error("not used"); }, cancelOrder: async () => { throw new Error("not used"); }, raisePurchaseOrder: async (_t: string, input: CreatePurchaseOrderInput) => {
       s.sent.push(input);
       const purchaseOrder: PurchaseOrder = { id: `PO-000${s.list.length + 1}`, supplierName: input.supplierName, status: "open", createdAt: new Date().toISOString(), raisedBy: { id: caps.user.id, name: caps.user.name },
         lines: input.lines.map((l) => ({ productId: l.productId, name: PRODUCTS.find((p) => p.id === l.productId)!.name, qtyOrdered: l.qty, qtyReceived: 0 })) };

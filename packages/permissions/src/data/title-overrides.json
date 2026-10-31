@@ -7,5 +7,8 @@
  "G01": "Loss report: closing balance differences by cashier",
  "K02": "Count differences and write-off request",
  "G05": "Loss report: stock count differences and write-offs",
- "EX03": "Petty cash balance and reconciliation"
+ "EX03": "Petty cash balance and reconciliation",
+ "S06": "Build an order",
+ "S02": "Parked sales and orders from the floor",
+ "T03": "Check returned goods"
 }

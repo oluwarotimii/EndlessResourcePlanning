@@ -2,7 +2,7 @@ import http from "node:http";
 import TENANT_JSON from "@erp/tenant-config/tenant.json" with { type: "json" };
 import { randomUUID } from "node:crypto";
 import {
-  ApprovalDecisionInput, CreateApprovalInput, AssignInput, CountSubmitInput, CreateStockRequestInput, GoodsReceiptInput, ProofInput, RemitInput, DispatchInput, ReceiveInput, WriteOffRequestInput, ReturnInput, refundFor, CreatePurchaseOrderInput, InspectReturnInput, MixupCorrectionInput, type MixupCorrection, returnDaysFor, daysSince, type ReturnRules, LoginRequest, PrintLogInput, SaleInput, ShiftCloseInput, ShiftOpenInput,
+  ApprovalDecisionInput, CreateApprovalInput, AssignInput, CountSubmitInput, CreateStockRequestInput, GoodsReceiptInput, ProofInput, RemitInput, DispatchInput, ReceiveInput, WriteOffRequestInput, ReturnInput, refundFor, CreatePurchaseOrderInput, InspectReturnInput, CreateOrderInput, type SalesOrder, MixupCorrectionInput, type MixupCorrection, returnDaysFor, daysSince, type ReturnRules, LoginRequest, PrintLogInput, SaleInput, ShiftCloseInput, ShiftOpenInput,
   cashOf, computeTotals, creditOf, discountAmount,
   type ApiError, type Approval, type Capabilities, type Customer, type Product, type PurchaseOrder, type ReturnRecord, type Sale, type DeliveryOrder, type StockCount, type StockRequest, type Transfer, type Shift, type VatMode,
 } from "@erp/api-contract";
@@ -40,6 +40,8 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
   const transfers = new Map<string, Transfer>();
   /** Purchase orders waiting to be received from a supplier (H01). Raising one is a later screen (R01). */
   const purchaseOrders = new Map<string, PurchaseOrder>(structuredClone(PURCHASE_ORDERS).map((po) => [po.id, po]));
+  const orders = new Map<string, SalesOrder>();
+  const orderKeys = new Map<string, string>(); // idempotency key -> order id
   const mixups = new Map<string, MixupCorrection>(); // by idempotency key
   const inspectionKeys = new Map<string, string>(); // idempotency key -> return number
   const purchaseOrderKeys = new Map<string, string>(); // idempotency key -> purchase order id
@@ -232,6 +234,14 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
           return fail(res, 400, "validation", `${creditCustomer.name} would go over the credit limit. A manager must approve.`);
         }
       }
+      let order: SalesOrder | undefined;
+      if (input.orderId) {
+        order = orders.get(input.orderId);
+        if (!order) return fail(res, 400, "validation", "That order does not exist.");
+        if (order.status !== "open") return fail(res, 400, "validation", order.status === "paid" ? "That order has already been paid." : "That order was cancelled.");
+        const same = order.lines.length === input.lines.length && input.lines.every((l) => order!.lines.some((o) => o.productId === l.productId && o.qty === l.qty));
+        if (!same) return fail(res, 400, "validation", "The sale does not match the order. Start again from the order.");
+      }
       const shift = shifts.get(input.shiftId);
       if (!shift || shift.userId !== user.id) return fail(res, 400, "validation", "This sale belongs to a shift that was never opened.");
       if (shift.status !== "open") return fail(res, 400, "validation", "This sale belongs to a shift that is already closed.");
@@ -242,6 +252,7 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
         cashier: { id: user.id, name: user.name }, postedAt: new Date().toISOString(),
       };
       sales.set(input.idempotencyKey, sale);
+      if (order) Object.assign(order, { status: "paid", invoiceNo: sale.invoiceNo, paidAt: sale.postedAt });
       if (input.discountApprovalId) approvalUses.set(input.discountApprovalId, input.idempotencyKey);
       if (creditApproval) approvalUses.set(creditApproval.id, input.idempotencyKey);
       return send(res, 200, { sale, duplicate: false });
@@ -299,6 +310,46 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
     if (req.method === "GET" && url.pathname === "/api/branches") {
       if (!can(caps(user), "Warehouse", "V")) return fail(res, 403, "forbidden", "Your role cannot see other branches.");
       return send(res, 200, { branches: Object.keys(branchStock).filter((b) => b !== user.branch) });
+    }
+    // Orders built on the floor (S06) and picked up by a cashier, who pays for them at the till.
+    if (req.method === "GET" && url.pathname === "/api/orders") {
+      if (!can(caps(user), "Stores (POS)", "V")) return fail(res, 403, "forbidden", "Your role cannot see orders.");
+      return send(res, 200, { orders: [...orders.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) });
+    }
+    if (req.method === "POST" && url.pathname === "/api/orders") {
+      if (!can(caps(user), "Stores (POS)", "C")) return fail(res, 403, "forbidden", "You have not been given permission to build orders.");
+      const parsed = CreateOrderInput.safeParse(await readJson(req));
+      if (!parsed.success) return fail(res, 400, "validation", "Add at least one item with a quantity.");
+      const input = parsed.data;
+      const seenId = orderKeys.get(input.idempotencyKey);
+      if (seenId) return send(res, 200, { order: orders.get(seenId), duplicate: true }); // a retry never makes two orders
+      const customer = input.customerId ? customers.find((c) => c.id === input.customerId) : undefined;
+      if (input.customerId && !customer) return fail(res, 400, "validation", "That customer does not exist.");
+      const lines = [];
+      for (const l of input.lines) {
+        const product = products.find((p) => p.id === l.productId);
+        if (!product) return fail(res, 400, "validation", "One of the items does not exist.");
+        if (l.qty > product.stock) return fail(res, 400, "validation", `Only ${product.stock} of ${product.name} in stock.`);
+        lines.push({ productId: product.id, name: product.name, unitPrice: product.price, qty: l.qty });
+      }
+      const order: SalesOrder = {
+        id: `SO-${String(orders.size + 1).padStart(4, "0")}`, status: "open", lines, customerId: customer?.id, customerName: customer?.name,
+        note: input.note || undefined, createdBy: { id: user.id, name: user.name }, createdAt: new Date(now()).toISOString(),
+      };
+      orders.set(order.id, order);
+      orderKeys.set(input.idempotencyKey, order.id);
+      return send(res, 200, { order, duplicate: false });
+    }
+    const cancelOrder = req.method === "POST" && url.pathname.match(/^\/api\/orders\/([^/]+)\/cancel$/);
+    if (cancelOrder) {
+      const order = orders.get(decodeURIComponent(cancelOrder[1] ?? ""));
+      if (!order) return fail(res, 400, "validation", "That order does not exist.");
+      if (order.createdBy.id !== user.id && !can(caps(user), "Stores (POS)", "A")) return fail(res, 403, "forbidden", "Only the person who built the order, or a manager, can cancel it.");
+      if (order.status === "cancelled") return send(res, 200, { order, duplicate: true });
+      if (order.status === "paid") return fail(res, 400, "validation", "That order has already been paid.");
+      order.status = "cancelled";
+      order.cancelledAt = new Date(now()).toISOString();
+      return send(res, 200, { order, duplicate: false });
     }
     // Fix a wrong-variant sale (Scenario 13). A manager (anyone holding the Approve permission on the till) makes the correction.
     if (req.method === "POST" && url.pathname === "/api/sales/correct-variant") {

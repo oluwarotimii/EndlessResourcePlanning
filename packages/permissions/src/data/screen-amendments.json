@@ -1,0 +1,44 @@
+{
+ "_note": "Merged over the Screen-Inventory spreadsheet by tools/gen-fixtures.py. roleAdditions: people who may also use a screen. newScreens: screens the owner asked for that the spreadsheet does not list. See docs/DECISIONS.md (54, 55).",
+ "roleAdditions": {
+  "T03": [
+   "Stock controller",
+   "Branch manager",
+   "Auditor"
+  ]
+ },
+ "newScreens": [
+  {
+   "id": "T04",
+   "area": "Returns",
+   "title": "Fix a mix-up",
+   "roles": [
+    "Branch manager"
+   ],
+   "erpnext": "None",
+   "verdict": "Build custom",
+   "pattern": "Wizard",
+   "device": "Tablet, phone",
+   "offline": "No",
+   "scope": "MVP",
+   "sprint": "S4"
+  },
+  {
+   "id": "G11",
+   "area": "Reporting",
+   "title": "Report: sales fixed after a mix-up, by cashier",
+   "roles": [
+    "Branch manager",
+    "MD / Executive",
+    "Auditor"
+   ],
+   "erpnext": "None",
+   "verdict": "Build custom",
+   "pattern": "Dashboard",
+   "device": "Tablet, phone",
+   "offline": "No",
+   "scope": "MVP",
+   "sprint": "S4"
+  }
+ ]
+}

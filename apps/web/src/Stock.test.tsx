@@ -61,7 +61,7 @@ function fakeServer(who: Capabilities) {
     },
     stockLevels: async (_t, q = "") => { down(); s.levelQueries.push(q); return { asOf: "now", levels: s.levels.filter((l) => l.name.toLowerCase().includes(q.toLowerCase())) }; },
     purchaseOrders: async () => { down(); return { purchaseOrders: s.purchaseOrders }; },
-    raisePurchaseOrder: async () => { throw new Error("not used"); }, receiveGoods: async (_t, id, input) => {
+    returnInspections: async () => { throw new Error("not used"); }, inspectReturn: async () => { throw new Error("not used"); }, correctVariant: async () => { throw new Error("not used"); }, mixupReport: async () => { throw new Error("not used"); }, orders: async () => { throw new Error("not used"); }, createOrder: async () => { throw new Error("not used"); }, cancelOrder: async () => { throw new Error("not used"); }, raisePurchaseOrder: async () => { throw new Error("not used"); }, receiveGoods: async (_t, id, input) => {
       down(); s.goodsReceived.push({ id, input });
       const po = s.purchaseOrders.find((x) => x.id === id)!;
       const newLines = po.lines.map((l) => ({ ...l, qtyReceived: l.qtyReceived + (input.lines.find((x) => x.productId === l.productId)?.qty ?? 0) }));

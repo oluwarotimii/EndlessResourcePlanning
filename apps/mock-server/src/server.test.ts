@@ -1363,3 +1363,54 @@ describe("credit partners: the partner is billed, and each account names who app
     expect(((await ok.json()) as { approval: { status: string } }).approval.status).toBe("approved");
   });
 });
+
+describe("orders built on the floor are paid by a cashier (the standard way to sell)", () => {
+  const uuid = () => crypto.randomUUID();
+  const as = async (userId: string, pin: string) => ({ authorization: `Bearer ${LoginResponse.parse(await (await post("/api/login", { userId, pin })).json()).token}` });
+  const get = (path: string, h: Record<string, string>) => fetch(`${base}${path}`, { headers: h });
+  type O = { id: string; status: string; lines: Array<{ productId: string; unitPrice: number; qty: number }>; invoiceNo?: string; customerName?: string };
+  const build = (h: Record<string, string>, body: Record<string, unknown> = {}, key = uuid()) =>
+    post("/api/orders", { idempotencyKey: key, lines: [{ productId: "p1", qty: 2 }, { productId: "p2", qty: 1 }], note: "Wants it gift wrapped", ...body }, h);
+  const pay = async (cashier: Record<string, string>, order: O, overrides: Record<string, unknown> = {}) => {
+    const shiftId = uuid();
+    await post("/api/shifts/open", { idempotencyKey: uuid(), shiftId, openedAt: new Date().toISOString(), openingFloat: 20000 }, cashier);
+    const subtotal = order.lines.reduce((n, l) => n + l.unitPrice * l.qty, 0);
+    return post("/api/sales", { idempotencyKey: uuid(), clientCreatedAt: new Date().toISOString(), shiftId, orderId: order.id, lines: order.lines.map((l) => ({ ...l, name: "x" })), subtotal, vatMode: "inclusive", vat: Math.round((subtotal * 0.075) / 1.075), total: subtotal, payments: [{ method: "cash", amount: subtotal }], ...overrides }, cashier);
+  };
+
+  it("an attendant builds an order with server prices; the cashier sees it, pays it once, and it shows as paid", async () => {
+    const rep = await as("u-rep2", "4003");
+    const cashier = await as("u-cashier", "1111");
+    const made = (await (await build(rep, { customerId: "c1" })).json()) as { order: O; duplicate: boolean };
+    expect(made.order).toMatchObject({ status: "open", customerName: "Ade Stores" });
+    expect(made.order.lines.map((l) => [l.productId, l.unitPrice, l.qty])).toEqual([["p1", 6500, 2], ["p2", 2500, 1]]); // priced by the server
+    const seen = ((await (await get("/api/orders", cashier)).json()) as { orders: O[] }).orders.find((o) => o.id === made.order.id);
+    expect(seen?.status).toBe("open");
+    const paid = await pay(cashier, made.order);
+    expect(paid.status).toBe(200);
+    const after = ((await (await get("/api/orders", cashier)).json()) as { orders: O[] }).orders.find((o) => o.id === made.order.id)!;
+    expect(after.status).toBe("paid");
+    expect(after.invoiceNo).toMatch(/^INV-/);
+    expect((await pay(cashier, made.order)).status).toBe(400); // the same order is never paid twice
+  });
+  it("a retry never makes two orders; an order that does not match, is cancelled, or asks for too much is refused", async () => {
+    const rep = await as("u-rep2", "4003");
+    const cashier = await as("u-cashier", "1111");
+    const key = uuid();
+    const first = (await (await build(rep, {}, key)).json()) as { order: O };
+    const again = (await (await build(rep, {}, key)).json()) as { order: O; duplicate: boolean };
+    expect(again.duplicate).toBe(true);
+    expect(again.order.id).toBe(first.order.id);
+    expect((await build(rep, { lines: [{ productId: "p1", qty: 9999 }] })).status).toBe(400); // more than in stock
+    expect((await build(rep, { lines: [] })).status).toBe(400);
+    const wrongLines = await pay(cashier, first.order, { lines: [{ productId: "p1", name: "x", unitPrice: 6500, qty: 1 }], subtotal: 6500, vat: 454, total: 6500, payments: [{ method: "cash", amount: 6500 }] });
+    expect(wrongLines.status).toBe(400); // the cashier changed the basket
+    expect((await post(`/api/orders/${first.order.id}/cancel`, {}, cashier)).status).toBe(403); // not their order, and not a manager
+    expect((await post(`/api/orders/${first.order.id}/cancel`, {}, rep)).status).toBe(200);
+    expect((await pay(cashier, first.order)).status).toBe(400); // cancelled
+  });
+  it("a role without the till permission cannot build orders", async () => {
+    const rider = await as("u-rider", "5555");
+    expect((await build(rider)).status).toBe(403);
+  });
+});

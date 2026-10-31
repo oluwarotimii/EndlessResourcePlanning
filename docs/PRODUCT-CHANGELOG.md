@@ -2,6 +2,18 @@
 
 Every change that alters what the product does, for users or for the business, gets an entry here **in the same change**, newest first. Each entry says what changed, which documents were updated, and what is still open. The rule is in `CLAUDE.md`; `docs/HANDOVER.md` has the checklist.
 
+## 2026-11-07, Orders built on the floor, and the screens for returns inspection and mix-ups
+
+**What changed**
+- **S06, Build an order (decision 54).** A sales attendant builds an order on a phone or tablet (scan or search; variant items must be scanned) with an optional customer and note, and sends it. Prices are set by the server.
+- **Cashier picks it up.** Parked sales and orders (S02) now lists the waiting orders; Take payment fills the till with every line and the customer, and the sale carries the order, which then shows as paid. The cashier cannot change the lines.
+- **T03, Check returned goods.** The screen for faulty returns: put back on the shelf, or send back to the supplier (decision 41).
+- **T04, Fix a mix-up** and **G11, Sales fixed after a mix-up** (decisions 53, 55).
+- **Credit partners at the till:** a partner appears in the customer search and can be chosen as the account to bill; credit over its limit goes to the approvers it names (decisions 42, 43). Keeping the buyer's name as well is not built.
+- **Cashierless plan in steps** added to `docs/CASHIERLESS-ALIGNMENT.md` (decision 56).
+**Documents updated:** `DECISIONS.md` (54 to 56), `ERPNEXT-MAPPING.md` (orders), `FRAPPE-APP-SPEC.md` (orders paths, `orderId` on a sale), `SCREEN-STATUS.md` and `screen-status-notes.json` (S06, T03, T04, G11), `CASHIERLESS-ALIGNMENT.md`, this entry.
+**Open:** the customer app (W02) and everything after step 1 of the cashierless plan; editing an order after it is sent; a message to the cashier when an order arrives; the real approvers, reasons and return days.
+
 ## 2026-11-06, Seven demo branches, transfers signed at both ends, permissions given to people, purchase orders (R01), cashierless comparison
 
 **What changed**

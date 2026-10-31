@@ -65,6 +65,14 @@ if scope_path.exists():
     scopes = {k: v for k, v in json.loads(scope_path.read_text()).items() if not k.startswith("_")}
     for sc in screens:
         sc["scope"] = scopes.get(sc["id"], sc["scope"])
+# Roles added to a screen, and screens the owner asked for that the spreadsheet does not list (docs/DECISIONS.md).
+amend_screens = out / "screen-amendments.json"
+if amend_screens.exists():
+    a = json.loads(amend_screens.read_text())
+    for sc in screens:
+        sc["roles"] = sorted(set(sc["roles"]) | set(a.get("roleAdditions", {}).get(sc["id"], [])))
+    for new in a.get("newScreens", []):
+        screens.append(new)
 (out / "screens.json").write_text(json.dumps(screens, indent=1))
 print(len(areas), "areas;", len(matrix), "roles;", len(limits), "limits;", len(screens), "screens;",
       sum(s["scope"] == "MVP" for s in screens), "MVP")

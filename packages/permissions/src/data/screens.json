@@ -168,7 +168,7 @@
  {
   "id": "S02",
   "area": "Stores (POS)",
-  "title": "Parked sales",
+  "title": "Parked sales and orders from the floor",
   "roles": [
    "Cashier"
   ],
@@ -229,7 +229,7 @@
  {
   "id": "S06",
   "area": "Stores (POS)",
-  "title": "Stock check and order",
+  "title": "Build an order",
   "roles": [
    "Sales rep"
   ],
@@ -238,7 +238,7 @@
   "pattern": "Scan flow",
   "device": "Phone",
   "offline": "Cached",
-  "scope": "Later",
+  "scope": "MVP",
   "sprint": "S8"
  },
  {
@@ -590,8 +590,11 @@
  {
   "id": "T03",
   "area": "Returns",
-  "title": "Returns inspection and restock",
+  "title": "Check returned goods",
   "roles": [
+   "Auditor",
+   "Branch manager",
+   "Stock controller",
    "Warehouse officer"
   ],
   "erpnext": "None",
@@ -599,7 +602,7 @@
   "pattern": "Wizard",
   "device": "Tablet",
   "offline": "Partial",
-  "scope": "Later",
+  "scope": "MVP",
   "sprint": "S7"
  },
  {
@@ -1537,5 +1540,37 @@
   "offline": "Yes",
   "scope": "Later",
   "sprint": "After S10"
+ },
+ {
+  "id": "T04",
+  "area": "Returns",
+  "title": "Fix a mix-up",
+  "roles": [
+   "Branch manager"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Wizard",
+  "device": "Tablet, phone",
+  "offline": "No",
+  "scope": "MVP",
+  "sprint": "S4"
+ },
+ {
+  "id": "G11",
+  "area": "Reporting",
+  "title": "Report: sales fixed after a mix-up, by cashier",
+  "roles": [
+   "Branch manager",
+   "MD / Executive",
+   "Auditor"
+  ],
+  "erpnext": "None",
+  "verdict": "Build custom",
+  "pattern": "Dashboard",
+  "device": "Tablet, phone",
+  "offline": "No",
+  "scope": "MVP",
+  "sprint": "S4"
  }
 ]

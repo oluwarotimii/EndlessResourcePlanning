@@ -83,7 +83,9 @@ Method names are proposals; the paths and rules are the contract the mock alread
 | `/api/shift/current` | `get_open_shift` | The cashier's open shift, if any. |
 | `/api/shifts/open` | `open_shift` | Create a POS Opening Entry with the opening balance. |
 | `/api/shifts/close` | `close_shift` | Close with the counted notes; recompute expected cash (opening balance + cash payments − cash refunds); require a reason when it differs; raise the Cash-up approval. |
-| `/api/sales` | `create_sale` | Create the POS Invoice; recompute totals, VAT and discount; payments must add up; credit needs a customer with room (or an approval); decrement stock. |
+| `/api/orders` | `list_orders`, `create_order` (POST, key required) | Sales Orders built on the floor (S06) and waiting for a cashier. POST needs the till Create permission; the server sets the prices from the Item Price list and refuses more than is in stock. |
+| `/api/orders/:id/cancel` | `cancel_order` | Cancels an order that is not paid; only its creator or a manager. |
+| `/api/sales` | `create_sale` (also takes `orderId`: the lines must match that open order, which then becomes paid) | Create the POS Invoice; recompute totals, VAT and discount; payments must add up; credit needs a customer with room (or an approval); decrement stock. |
 | `/api/sales/lookup` | `lookup_sale` | Find a sale by invoice number with what is already returned. |
 | `/api/returns` | `create_return` | Needs an approved refund tied to the sale and lines; refund by share of what was paid; reduce the customer's balance first for the credit share; lower expected cash for cash refunds. |
 | `/api/print-log` | `log_print` | Record a reprint. |

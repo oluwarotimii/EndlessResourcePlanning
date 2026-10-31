@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  BranchesResponse, BranchSummary, CreatePurchaseOrderInput, CodOutstanding, DeliveryOrderResponse, DeliveryOrdersResponse, RemitResponse, RidersResponse, CountResponse, CountSheet, CountsResponse, WriteOffRequestResponse, InTransitReport, PurchaseOrderResponse, PurchaseOrdersResponse, StockLevelsResponse, TransferResponse, TransfersResponse, StockRequestResponse, StockRequestsResponse, ReturnResponse, SaleLookupResponse, CashUpVarianceReport, ApiError, ApprovalResponse, ApprovalsResponse, Capabilities, CustomersResponse, LoginResponse, ProductsResponse, SaleResponse, ShiftResponse, TasksResponse, UsersResponse,
+  BranchesResponse, BranchSummary, InspectReturnInput, MixupCorrectionInput, MixupCorrectionResponse, MixupReport, ReturnInspectionsResponse, CreateOrderInput, CreatePurchaseOrderInput, OrderResponse, OrdersResponse, CodOutstanding, DeliveryOrderResponse, DeliveryOrdersResponse, RemitResponse, RidersResponse, CountResponse, CountSheet, CountsResponse, WriteOffRequestResponse, InTransitReport, PurchaseOrderResponse, PurchaseOrdersResponse, StockLevelsResponse, TransferResponse, TransfersResponse, StockRequestResponse, StockRequestsResponse, ReturnResponse, SaleLookupResponse, CashUpVarianceReport, ApiError, ApprovalResponse, ApprovalsResponse, Capabilities, CustomersResponse, LoginResponse, ProductsResponse, SaleResponse, ShiftResponse, TasksResponse, UsersResponse,
   type AssignInput, type ProofInput, type RemitInput, type CountSubmitInput, type WriteOffRequestInput, type DispatchInput, type GoodsReceiptInput, type ReceiveInput, type CreateStockRequestInput, type ReturnInput, type ApprovalDecisionInput, type CreateApprovalInput, type LoginRequest, type PrintLogInput, type SaleInput, type ShiftCloseInput, type ShiftOpenInput,
 } from "@erp/api-contract";
 
@@ -41,6 +41,20 @@ export interface ApiClient {
   receiveTransfer(token: string, transferId: string, input: ReceiveInput): Promise<TransferResponse>;
   /** Purchase orders waiting to be received from a supplier (H01). */
   purchaseOrders(token: string): Promise<PurchaseOrdersResponse>;
+  /** Faulty returns waiting in the check area, and recently decided ones (T03). */
+  returnInspections(token: string): Promise<ReturnInspectionsResponse>;
+  /** Decide what happens to a faulty return: back on the shelf, or to the supplier (RMA). Safe to retry (idempotency key). */
+  inspectReturn(token: string, returnNo: string, input: InspectReturnInput): Promise<ReturnResponse>;
+  /** Fix a wrong-variant sale (T04). Needs the Approve permission. Safe to retry (idempotency key). */
+  correctVariant(token: string, input: MixupCorrectionInput): Promise<MixupCorrectionResponse>;
+  /** Mix-ups fixed, by the cashier who made the sale (G11). */
+  mixupReport(token: string): Promise<MixupReport>;
+  /** Orders built on the floor, waiting for a cashier or already paid. */
+  orders(token: string): Promise<OrdersResponse>;
+  /** Build an order on a phone or tablet. Prices are set by the server. Safe to retry (idempotency key). */
+  createOrder(token: string, input: CreateOrderInput): Promise<OrderResponse>;
+  /** Cancel an order that has not been paid. */
+  cancelOrder(token: string, orderId: string): Promise<OrderResponse>;
   /** Raise a purchase order (R01). Needs the Procurement permission. Safe to retry (idempotency key). */
   raisePurchaseOrder(token: string, input: CreatePurchaseOrderInput): Promise<PurchaseOrderResponse>;
   /** Record what arrived from a supplier against a purchase order. Safe to retry (idempotency key). */
@@ -110,6 +124,13 @@ export function httpApi(base = ""): ApiClient {
     dispatchTransfer: (token, input) => call("/api/transfers", TransferResponse, { method: "POST", token, body: JSON.stringify(input) }),
     receiveTransfer: (token, transferId, input) => call(`/api/transfers/${encodeURIComponent(transferId)}/receive`, TransferResponse, { method: "POST", token, body: JSON.stringify(input) }),
     purchaseOrders: (token) => call("/api/purchase-orders", PurchaseOrdersResponse, { token }),
+    returnInspections: (token) => call("/api/returns/inspections", ReturnInspectionsResponse, { token }),
+    inspectReturn: (token, returnNo, input) => call(`/api/returns/${encodeURIComponent(returnNo)}/inspect`, ReturnResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    correctVariant: (token, input) => call("/api/sales/correct-variant", MixupCorrectionResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    mixupReport: (token) => call("/api/reports/mixups", MixupReport, { token }),
+    orders: (token) => call("/api/orders", OrdersResponse, { token }),
+    createOrder: (token, input) => call("/api/orders", OrderResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    cancelOrder: (token, orderId) => call(`/api/orders/${encodeURIComponent(orderId)}/cancel`, OrderResponse, { method: "POST", token, body: "{}" }),
     raisePurchaseOrder: (token, input) => call("/api/purchase-orders", PurchaseOrderResponse, { method: "POST", token, body: JSON.stringify(input) }),
     receiveGoods: (token, purchaseOrderId, input) => call(`/api/purchase-orders/${encodeURIComponent(purchaseOrderId)}/receive`, PurchaseOrderResponse, { method: "POST", token, body: JSON.stringify(input) }),
     stockLevels: (token, q = "") => call(`/api/stock?q=${encodeURIComponent(q)}`, StockLevelsResponse, { token }),

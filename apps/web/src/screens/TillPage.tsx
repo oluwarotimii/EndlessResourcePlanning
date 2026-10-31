@@ -128,7 +128,7 @@ export function TillPage() {
       const key = cart.chargeKey ?? crypto.randomUUID();
       const now = new Date().toISOString();
       const payload: SaleInput = {
-        idempotencyKey: key, clientCreatedAt: now, shiftId: shift.id, customerId: cart.customer?.id,
+        idempotencyKey: key, clientCreatedAt: now, shiftId: shift.id, customerId: cart.customer?.id, orderId: cart.orderId,
         lines: cart.lines, subtotal: grossSubtotal, vatMode: tenant.tax.mode, vat: totals.vat, total,
         discountApprovalId: cart.discount?.approvalId,
         creditApprovalId: credit > 0 ? cart.creditApproval?.approvalId : undefined, payments,

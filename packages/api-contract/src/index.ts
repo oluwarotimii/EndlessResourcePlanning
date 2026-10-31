@@ -128,6 +128,8 @@ export const SaleInput = z.object({
   clientCreatedAt: z.string(),
   shiftId: Id,
   customerId: z.string().optional(),
+  /** The order from the floor this sale pays for. The server checks the lines match and marks the order paid. */
+  orderId: z.string().optional(),
   /** Bill the credit part of this sale to a credit partner instead of the customer. The partner's limit and balance are used. */
   billToId: z.string().optional(),
   /** An approved discount may be applied once. The server checks the approval and recomputes the totals. */
@@ -438,6 +440,41 @@ export const ReturnRecord = ReturnInput.extend({
   }).optional(),
 });
 export type ReturnRecord = z.infer<typeof ReturnRecord>;
+/* ───────────── Orders built on the floor, paid at the till ───────────── */
+
+export const OrderStatus = z.enum(["open", "paid", "cancelled"]);
+export type OrderStatus = z.infer<typeof OrderStatus>;
+/**
+ * An order is built by a sales attendant on a phone or tablet and handed to a cashier, who picks it up and takes payment.
+ * Prices are set by the server when the order is made. In ERPNext this is a Sales Order that becomes the Sales Invoice.
+ */
+export const SalesOrder = z.object({
+  id: z.string(),
+  status: OrderStatus,
+  lines: z.array(SaleLine),
+  customerId: z.string().optional(),
+  customerName: z.string().optional(),
+  note: z.string().optional(),
+  createdBy: z.object({ id: z.string(), name: z.string() }),
+  createdAt: z.string(),
+  /** Set when the order was paid. */
+  invoiceNo: z.string().optional(),
+  paidAt: z.string().optional(),
+  cancelledAt: z.string().optional(),
+});
+export type SalesOrder = z.infer<typeof SalesOrder>;
+export const CreateOrderInput = z.object({
+  idempotencyKey: Id,
+  lines: z.array(z.object({ productId: z.string(), qty: z.number().int().positive() })).min(1),
+  customerId: z.string().optional(),
+  note: z.string().trim().max(300).optional(),
+});
+export type CreateOrderInput = z.infer<typeof CreateOrderInput>;
+export const OrdersResponse = z.object({ orders: z.array(SalesOrder) });
+export type OrdersResponse = z.infer<typeof OrdersResponse>;
+export const OrderResponse = z.object({ order: SalesOrder, duplicate: z.boolean() });
+export type OrderResponse = z.infer<typeof OrderResponse>;
+
 /* ───────────── Fixing a wrong-variant sale (Scenario 13) ───────────── */
 
 /**
