@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
-  ApiError, ApprovalResponse, ApprovalsResponse, Capabilities, CustomersResponse, LoginResponse, ProductsResponse, SaleResponse, ShiftResponse, TasksResponse, UsersResponse,
-  type ApprovalDecisionInput, type CreateApprovalInput, type LoginRequest, type PrintLogInput, type SaleInput, type ShiftCloseInput, type ShiftOpenInput,
+  BranchSummary, CodOutstanding, DeliveryOrderResponse, DeliveryOrdersResponse, RemitResponse, RidersResponse, CountResponse, CountSheet, CountsResponse, WriteOffRequestResponse, InTransitReport, StockLevelsResponse, TransferResponse, TransfersResponse, StockRequestResponse, StockRequestsResponse, ReturnResponse, SaleLookupResponse, CashUpVarianceReport, ApiError, ApprovalResponse, ApprovalsResponse, Capabilities, CustomersResponse, LoginResponse, ProductsResponse, SaleResponse, ShiftResponse, TasksResponse, UsersResponse,
+  type AssignInput, type ProofInput, type RemitInput, type CountSubmitInput, type WriteOffRequestInput, type DispatchInput, type ReceiveInput, type CreateStockRequestInput, type ReturnInput, type ApprovalDecisionInput, type CreateApprovalInput, type LoginRequest, type PrintLogInput, type SaleInput, type ShiftCloseInput, type ShiftOpenInput,
 } from "@erp/api-contract";
 
 /** Screens only ever talk to this interface. Mock today, ERPNext adapter in Sprint 5. */
@@ -18,6 +18,37 @@ export interface ApiClient {
   openShift(token: string, input: ShiftOpenInput): Promise<ShiftResponse>;
   closeShift(token: string, input: ShiftCloseInput): Promise<ShiftResponse>;
   logPrint(token: string, input: PrintLogInput): Promise<void>;
+  summary(token: string): Promise<BranchSummary>;
+  deliveryOrders(token: string): Promise<DeliveryOrdersResponse>;
+  riders(token: string): Promise<RidersResponse>;
+  assignDelivery(token: string, orderId: string, input: AssignInput): Promise<DeliveryOrderResponse>;
+  /** Proof of delivery or of a failed delivery. Safe to retry; works offline. */
+  proveDelivery(token: string, input: ProofInput): Promise<DeliveryOrderResponse>;
+  /** Hand in cash collected on delivery; a manager confirms it. Safe to retry. */
+  remitCash(token: string, input: RemitInput): Promise<RemitResponse>;
+  codOutstanding(token: string): Promise<CodOutstanding>;
+  /** The sheet to count from. It has no system quantities: the count is blind. */
+  countSheet(token: string, location: "branch" | "warehouse"): Promise<CountSheet>;
+  counts(token: string): Promise<CountsResponse>;
+  /** Submit a count (round 1) or the recount of the items that differ (round 2). Safe to retry. */
+  submitCount(token: string, input: CountSubmitInput): Promise<CountResponse>;
+  /** Put a finished count's differences up for approval. Safe to retry. */
+  requestWriteOff(token: string, countId: string, input: WriteOffRequestInput): Promise<WriteOffRequestResponse>;
+  transfers(token: string): Promise<TransfersResponse>;
+  /** Send what the branch asked for. Safe to retry (idempotency key). */
+  dispatchTransfer(token: string, input: DispatchInput): Promise<TransferResponse>;
+  /** Count what arrived. Safe to retry (idempotency key). */
+  receiveTransfer(token: string, transferId: string, input: ReceiveInput): Promise<TransferResponse>;
+  stockLevels(token: string, q?: string): Promise<StockLevelsResponse>;
+  inTransitReport(token: string): Promise<InTransitReport>;
+  stockRequests(token: string): Promise<StockRequestsResponse>;
+  /** Ask the warehouse for stock. Safe to retry (idempotency key). */
+  createStockRequest(token: string, input: CreateStockRequestInput): Promise<StockRequestResponse>;
+  /** Find a sale by invoice number so goods can be returned against it. */
+  lookupSale(token: string, invoiceNo: string): Promise<SaleLookupResponse>;
+  /** Record a return under an approved refund. Safe to retry (idempotency key). */
+  createReturn(token: string, input: ReturnInput): Promise<ReturnResponse>;
+  cashUpVariance(token: string): Promise<CashUpVarianceReport>;
   /** Decisions are online-only and idempotent. The server enforces limits and the creator rule. */
   approvals(token: string): Promise<ApprovalsResponse>;
   createApproval(token: string, input: CreateApprovalInput): Promise<ApprovalResponse>;
@@ -62,6 +93,27 @@ export function httpApi(base = ""): ApiClient {
     createSale: (token, input) => call("/api/sales", SaleResponse, { method: "POST", token, body: JSON.stringify(input) }),
     openShift: (token, input) => call("/api/shifts/open", ShiftResponse, { method: "POST", token, body: JSON.stringify(input) }),
     closeShift: (token, input) => call("/api/shifts/close", ShiftResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    lookupSale: (token, invoiceNo) => call(`/api/sales/lookup?invoiceNo=${encodeURIComponent(invoiceNo)}`, SaleLookupResponse, { token }),
+    createReturn: (token, input) => call("/api/returns", ReturnResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    stockRequests: (token) => call("/api/stock-requests", StockRequestsResponse, { token }),
+    createStockRequest: (token, input) => call("/api/stock-requests", StockRequestResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    transfers: (token) => call("/api/transfers", TransfersResponse, { token }),
+    dispatchTransfer: (token, input) => call("/api/transfers", TransferResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    receiveTransfer: (token, transferId, input) => call(`/api/transfers/${encodeURIComponent(transferId)}/receive`, TransferResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    stockLevels: (token, q = "") => call(`/api/stock?q=${encodeURIComponent(q)}`, StockLevelsResponse, { token }),
+    inTransitReport: (token) => call("/api/reports/in-transit", InTransitReport, { token }),
+    countSheet: (token, location) => call(`/api/count-sheet?location=${location}`, CountSheet, { token }),
+    counts: (token) => call("/api/counts", CountsResponse, { token }),
+    submitCount: (token, input) => call("/api/counts", CountResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    requestWriteOff: (token, countId, input) => call(`/api/counts/${encodeURIComponent(countId)}/write-off`, WriteOffRequestResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    deliveryOrders: (token) => call("/api/delivery/orders", DeliveryOrdersResponse, { token }),
+    riders: (token) => call("/api/delivery/riders", RidersResponse, { token }),
+    assignDelivery: (token, orderId, input) => call(`/api/delivery/orders/${encodeURIComponent(orderId)}/assign`, DeliveryOrderResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    proveDelivery: (token, input) => call("/api/delivery/proof", DeliveryOrderResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    remitCash: (token, input) => call("/api/delivery/remit", RemitResponse, { method: "POST", token, body: JSON.stringify(input) }),
+    codOutstanding: (token) => call("/api/delivery/outstanding", CodOutstanding, { token }),
+    summary: (token) => call("/api/summary", BranchSummary, { token }),
+    cashUpVariance: (token) => call("/api/reports/cashup-variance", CashUpVarianceReport, { token }),
     logPrint: (token, input) => call("/api/print-log", z.object({}).passthrough(), { method: "POST", token, body: JSON.stringify(input) }).then(() => undefined),
     approvals: (token) => call("/api/approvals", ApprovalsResponse, { token }),
     createApproval: (token, input) => call("/api/approvals", ApprovalResponse, { method: "POST", token, body: JSON.stringify(input) }),

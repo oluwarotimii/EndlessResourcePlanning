@@ -21,6 +21,7 @@ This is the detailed "how", written so another model or person can repeat it. `d
 6. Typed dictionary (`en.ts`): the compiler lists every missing string, which makes "no text in components" enforceable.
 
 ## Phase 3. The loop used for every feature (Sprint 2 onward)
+0. **Ask how it lives in ERPNext** and add or update a row in `docs/ERPNEXT-MAPPING.md` (Owner / Seen / Proposal).
 1. **Contract first** (Zod schemas, shared pure rules such as `computeTotals`).
 2. **Pure logic with unit tests** (cart, limits, queue, VAT, expected cash).
 3. **Mock server behaviour with contract tests**, including the awkward cases: wrong PIN, lockout, outage (a header injects a 503), duplicate idempotency key, closed shift, over credit limit, forbidden role.

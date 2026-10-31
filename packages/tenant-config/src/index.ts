@@ -34,7 +34,31 @@ export const TenantConfig = z.object({
     paymentMethods: z.array(z.enum(["cash", "transfer", "card", "credit", "other"])).min(1),
     /** Let one sale be paid with more than one method (for example part cash, part credit). */
     allowSplitPayments: z.boolean(),
+    /** Items that come in variants must be added by scanning the barcode, not by tapping a tile, so the wrong variant is not sold by mistake. */
+    scanRequiredForVariants: z.boolean(),
   }),
+  /** Cash-up at shift close. The variance reasons are PLACEHOLDERS until the business supplies its real codes. */
+  cashUp: z.object({
+    denominations: z.array(z.number().int().positive()).min(1),
+    varianceReasons: z.array(z.string().min(1)).min(1),
+  }),
+  /** Reasons a cashier can pick when a customer returns goods. PLACEHOLDERS until the business supplies its real reasons. */
+  returns: z.object({
+    reasons: z.array(z.string().min(1)).min(1),
+    /** How many days after a sale a return is accepted. The most specific rule wins: product, then category, then the default. PLACEHOLDERS. */
+    rules: z.object({
+      defaultDays: z.number().int().nonnegative(),
+      faultyDays: z.number().int().nonnegative(),
+      /** Reasons (from `reasons`) that count as a faulty item and use the faulty days. */
+      faultyReasons: z.array(z.string().min(1)),
+      byCategory: z.record(z.string(), z.object({ days: z.number().int().nonnegative().optional(), faultyDays: z.number().int().nonnegative().optional() })),
+      byProduct: z.record(z.string(), z.object({ days: z.number().int().nonnegative().optional(), faultyDays: z.number().int().nonnegative().optional() })),
+    }),
+  }),
+  /** Delivery settings. The failed-delivery reasons are PLACEHOLDERS until the business supplies its real ones. */
+  delivery: z.object({ failedReasons: z.array(z.string().min(1)).min(1), codRemitHours: z.number().int().positive() }),
+  /** Stock and delivery settings. */
+  stock: z.object({ inTransitAlertHours: z.number().int().positive(), shortageRulingHours: z.number().int().positive(), recountByDifferentPerson: z.boolean() }),
   offline: z.object({
     maxOfflineSalesPerTill: z.number().int().positive(),
     syncWindowHours: z.number().int().positive(),

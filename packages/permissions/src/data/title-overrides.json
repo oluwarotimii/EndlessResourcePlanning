@@ -1,0 +1,11 @@
+{
+ "_help": "Plain-word screen titles shown to users. Merged over the spreadsheet titles by `pnpm fixtures`; the spreadsheet itself is not edited. Ids are Screen-Inventory ids.",
+ "S03": "Open and close shift",
+ "Q01": "Closing balance count",
+ "Q02": "Closing balance approval",
+ "Q03": "Cross-branch closing balance review and bank deposit",
+ "G01": "Loss report: closing balance differences by cashier",
+ "K02": "Count differences and write-off request",
+ "G05": "Loss report: stock count differences and write-offs",
+ "EX03": "Petty cash balance and reconciliation"
+}

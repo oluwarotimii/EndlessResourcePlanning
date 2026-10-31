@@ -25,7 +25,12 @@ Demo PINs: Cashier **1111**, Branch manager **2222**, Warehouse officer **3333**
 | `docs/PRODUCT-CHANGELOG.md` | Every product change, newest first |
 | `docs/DECISIONS.md` | Decisions, open questions for the business, problems found in the source documents |
 | `docs/SCREEN-STATUS.md` | Generated status of all 93 screens |
+| `docs/FRAPPE-APP-SPEC.md` | The build list for the custom Frappe app on the back end |
+| `docs/SCENARIOS.md` | The open questions as stories with numbers (start here to answer them) |
+| `docs/ERPNEXT-MAPPING.md` | How each concept lives in ERPNext, and the questions to answer on staging |
 | `docs/TENANT-CONFIG.md` | Every company setting in `tenant.json` |
+| `docs/APPROVAL-ROUTING.md` | Who approves what, and how to change it |
+| `docs/GLOSSARY.md` | Plain-word meanings (closing balance, float, variance...) |
 | `docs/DESIGN-SYSTEM.md`, `docs/PRINTING.md` | Design system use and A5 printing |
 | `docs/source/` | The owner's original requirements, plan, spreadsheets and design demonstrator |
 
@@ -48,11 +53,31 @@ Demo PINs: Cashier **1111**, Branch manager **2222**, Warehouse officer **3333**
 - **S05 (needs-manager request) is built inside the till:** "Ask a manager" raises a discount or void request with an optional reason. Nothing changes until approval; an approved discount applies to the gross subtotal before VAT, and an approved void clears the cart. Requests are blocked offline.
 - The over-limit credit request (`CR01`) is the next increment; the mock seeds a few requests for the demo.
 
+## What Sprint 3 adds so far (cash and approvals)
+
+- **Approvals inbox (A01)** with hold-to-confirm and a required rejection reason; **needs-manager request (S05)**; **over-limit credit approval**.
+- **Closing balance (Q01):** closing a shift is a blind count by note, then the variance; a mismatch needs a reason. **Approval (Q02):** a manager or cash controller signs it off; the cashier never approves their own count.
+- **Manager home (A02)** and **closing balance differences by cashier (G01)**: server-computed figures that also open offline from the last saved copy.
+- **Customer returns (T01):** find the sale, choose what comes back, a manager approves the refund through the routing setting, then the return is completed once. Cash refunds lower the expected closing balance.
+- **Branch stock request (H02):** ask the warehouse for stock and follow the request.
+- **Sprint 3 is complete.** Next is Sprint 4 (stock and delivery).
+- **Real-browser tests:** `node e2e/till-offline.cjs` and `node e2e/returns.cjs` (see "Real-browser test"), and `node e2e/stock.cjs`, `node e2e/count.cjs`.
+
+## What Sprint 4 adds so far (stock and delivery)
+
+- **Pack and send stock (H03)** and **receive stock (H04):** scan each item, send less than asked if needed, flag any shortage; both work offline; the dispatcher can never receive their own transfer.
+- **Stock lookup (H05)** (shelf and warehouse, opens offline) and the **in-transit report (G02)** (transfers on the road too long, setting `stock.inTransitAlertHours`).
+- **Shortage ruling:** missing stock opens a ruling for someone independent (default Auditor or MD); the ruler chooses who bears the loss (branch, warehouse or transport); nothing is charged automatically; the value at cost is hidden from the branch.
+- **Stock count (K01)** is blind: no system quantities, offline, items that differ are recounted by a different person; **differences (K02)** go for approval and stock changes only when approved.
+- **Delivery:** dispatch board (L01), rider deliveries on a phone (L02), proof of delivery in 3 taps offline (L03), hand in delivery cash confirmed by a manager (L04), delivery cash not handed in (L05). **Sprint 4 is complete.** Variants must be scanned, and a stock count flags a possible mix-up.
+- Real-browser test for delivery: `node e2e/delivery.cjs` (needs a fresh mock server).
+- Real-browser test: `node e2e/stock.cjs`.
+
 ## What Sprint 2.1 adds (VAT, credit, split payments)
 
 - **VAT is a company setting** (`tax.mode` in `tenant.json`): `inclusive` (price already has VAT), `exclusive` (VAT added on top, the customer pays more) or `none`. One shared rule is used by the till, documents and the server.
 - **Payment methods are configurable:** cash, transfer, card, **credit**, other. **Split payments** and **part credit** are allowed (`till.allowSplitPayments`). Credit needs a customer with credit terms and room under their limit (checked on the device and by the server).
-- **Cash-up** counts only cash payments as cash in the drawer.
+- **Closing balance** counts only cash payments as cash in the drawer.
 - Documents show each payment and the balance on credit. See `docs/TENANT-CONFIG.md` and `docs/PRODUCT-CHANGELOG.md`.
 
 ## What Sprint 2 adds (cashier core)
@@ -77,4 +102,4 @@ node e2e/till-offline.cjs                   # sell online, go offline, reload, s
 
 ## Not built yet (by design)
 
-Returns, needs-manager request, raising an over-limit credit request from the till, cash-up and sign-off, the manager home and the variance report (rest of S3); stock and delivery (S4). Camera barcode scanning (keyboard scanners are the default per the plan), real payment confirmation (Paystack, Sprint 9), the ERPNext adapter (S5). Every other registry screen opens a placeholder.
+Returns, needs-manager request, raising an over-limit credit request from the till, closing balance and approval, the manager home and the variance report (rest of S3); stock and delivery (S4). Camera barcode scanning (keyboard scanners are the default per the plan), real payment confirmation (Paystack, Sprint 9), the ERPNext adapter (S5). Every other registry screen opens a placeholder.

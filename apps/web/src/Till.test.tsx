@@ -13,6 +13,10 @@ import { TenantProvider } from "./state/tenant";
 
 const tenant = loadTenant(tenantJson);
 const CASHIER: Capabilities = { user: { id: "u-cashier", name: "Amaka Obi" }, roles: ["Cashier"], areas: areasForRoles(["Cashier"]), scope: { branch: "Pilot Branch" } };
+const VARIANTS = [
+  { id: "p5", sku: "CSE-CLR", barcode: "6001000000066", name: "Clear phone case", price: 3000, stock: 75, family: "Phone case", variant: "Clear" },
+  { id: "p6", sku: "CSE-BLK", barcode: "6001000000134", name: "Black phone case", price: 3500, stock: 60, family: "Phone case", variant: "Black" },
+];
 const PRODUCTS = [
   { id: "p1", sku: "CHG-20W", barcode: "6001000000011", name: "Phone charger 20W", price: 6500, stock: 40 },
   { id: "p2", sku: "CBL-USBC", barcode: "6001000000028", name: "USB-C cable 1m", price: 2500, stock: 120 },
@@ -22,14 +26,14 @@ const PRODUCTS = [
 function fakeServer() {
   const sales = new Map<string, SaleInput>();
   const approvals: Approval[] = [];
-  const s = { down: false, createCalls: [] as string[], opened: [] as string[], closed: [] as number[], printLogs: 0, sales, approvals };
+  const s = { down: false, createCalls: [] as string[], opened: [] as string[], closed: [] as number[], closeInputs: [] as Array<{ countedCash: number; denominations?: Record<string, number>; varianceReason?: string }>, printLogs: 0, sales, approvals };
   const api: ApiClient = {
     users: async () => ({ deviceBranch: "Pilot Branch", users: [] }),
     login: async () => { throw new Error("unused"); },
     capabilities: async () => CASHIER,
     tasks: async () => ({ tasks: [] }),
     logout: async () => undefined,
-    products: async () => { if (s.down) throw new ApiFailure("unavailable", "unavailable"); return { products: PRODUCTS, asOf: "now" }; },
+    products: async () => { if (s.down) throw new ApiFailure("unavailable", "unavailable"); return { products: [...PRODUCTS, ...VARIANTS], asOf: "now" }; },
     customers: async () => ({ customers: [
       { id: "c1", name: "Ade Stores", phone: "0803", creditLimit: 200000, balance: 50000 },
       { id: "c2", name: "Bola Ventures", phone: "0804", creditLimit: 100000, balance: 98000 },
@@ -43,8 +47,19 @@ function fakeServer() {
       return { duplicate, sale: { ...input, invoiceNo: "INV-000001", cashier: { id: "u-cashier", name: "Amaka Obi" }, postedAt: "now" } };
     },
     openShift: async (_t, i) => { if (s.down) throw new ApiFailure("unavailable", "unavailable"); s.opened.push(i.shiftId); return { duplicate: false, shift: { id: i.shiftId, status: "open", openingFloat: i.openingFloat, openedAt: i.openedAt } }; },
-    closeShift: async (_t, i) => { s.closed.push(i.countedCash); return { duplicate: false, shift: { id: i.shiftId, status: "closed", openingFloat: 0, openedAt: "x" } }; },
+    closeShift: async (_t, i) => { s.closed.push(i.countedCash); s.closeInputs.push(i); return { duplicate: false, shift: { id: i.shiftId, status: "closed", openingFloat: 0, openedAt: "x" } }; },
     logPrint: async () => { s.printLogs++; },
+    summary: async () => { throw new Error("not used"); },
+    cashUpVariance: async () => { throw new Error("not used"); },
+    lookupSale: async () => { throw new Error("not used"); },
+    createReturn: async () => { throw new Error("not used"); },
+    stockRequests: async () => { throw new Error("not used"); },
+    createStockRequest: async () => { throw new Error("not used"); },
+    transfers: async () => { throw new Error("not used"); },
+    dispatchTransfer: async () => { throw new Error("not used"); },
+    receiveTransfer: async () => { throw new Error("not used"); },
+    stockLevels: async () => { throw new Error("not used"); },
+    countSheet: async () => { throw new Error("not used"); }, counts: async () => { throw new Error("not used"); }, submitCount: async () => { throw new Error("not used"); }, deliveryOrders: async () => { throw new Error("not used"); }, riders: async () => { throw new Error("not used"); }, assignDelivery: async () => { throw new Error("not used"); }, proveDelivery: async () => { throw new Error("not used"); }, remitCash: async () => { throw new Error("not used"); }, codOutstanding: async () => { throw new Error("not used"); }, requestWriteOff: async () => { throw new Error("not used"); }, inTransitReport: async () => { throw new Error("not used"); },
     approvals: async () => ({ approvals: approvals.map((a) => ({ ...a })) }),
     createApproval: async (_t, input) => {
       if (s.down) throw new ApiFailure("unavailable", "unavailable");
@@ -170,23 +185,77 @@ describe("shift open and close", () => {
   it("opens with a counted float and queues it", async () => {
     const { api, s } = fakeServer();
     mount(api, "/s/S03");
-    fireEvent.change(await screen.findByLabelText(/opening float/i), { target: { value: "20000" } });
+    fireEvent.change(await screen.findByLabelText(/opening balance/i), { target: { value: "20000" } });
     fireEvent.click(screen.getByRole("button", { name: "Open shift" }));
     expect(await screen.findByRole("heading", { name: "Close shift" })).toBeInTheDocument();
     await waitFor(() => expect(s.opened).toHaveLength(1));
   });
 
-  it("shows the variance, then closes and signs out", async () => {
-    const { api, s } = fakeServer();
+  it("closing goes through the cash-up count: S03 offers the count and never shows the expected cash", async () => {
+    const { api } = fakeServer();
     await seedShift();
     mount(api, "/s/S03");
+    expect(await screen.findByRole("link", { name: /count the cash and close/i })).toBeInTheDocument();
+    expect(screen.queryByTestId("expected")).not.toBeInTheDocument();
+  });
+});
+
+describe("closing balance count (Q01)", () => {
+  const notes = (n: string) => screen.getByLabelText(`Number of ${n} notes`);
+
+  it("is a blind count: the expected cash appears only after counting, then a short count needs a reason", async () => {
+    const { api, s } = fakeServer();
+    await seedShift();
+    mount(api, "/s/Q01");
+    expect(await screen.findByRole("heading", { name: "Closing balance count" })).toBeInTheDocument();
+    expect(screen.queryByTestId("expected")).not.toBeInTheDocument(); // blind
+    fireEvent.change(notes("₦1,000"), { target: { value: "19" } });
+    expect(screen.getByTestId("counted")).toHaveTextContent(/19,000/);
+    fireEvent.click(screen.getByRole("button", { name: "Finish counting" }));
     expect(await screen.findByTestId("expected")).toHaveTextContent(/20,000/);
-    fireEvent.change(screen.getByLabelText(/cash counted/i), { target: { value: "19500" } });
-    expect(screen.getByTestId("variance")).toHaveTextContent(/500 short/);
-    fireEvent.click(screen.getByRole("button", { name: /review and close/i }));
-    fireEvent.click(await screen.findByRole("button", { name: /close shift and sign out/i }));
-    await waitFor(() => expect(s.closed).toEqual([19500]));
+    expect(screen.getByTestId("variance")).toHaveTextContent(/1,000 short/);
+    const confirm = screen.getByRole("button", { name: /close shift and sign out/i });
+    expect(confirm).toBeDisabled(); // a mismatch needs a reason
+    fireEvent.change(screen.getByLabelText(/why does the count not match/i), { target: { value: "Counting error" } });
+    fireEvent.change(screen.getByLabelText(/note \(optional\)/i), { target: { value: "Miscounted the 500s" } });
+    expect(confirm).toBeEnabled();
+    fireEvent.click(confirm);
+    await waitFor(() => expect(s.closeInputs).toHaveLength(1));
+    expect(s.closeInputs[0]).toMatchObject({ countedCash: 19000, denominations: { "1000": 19 }, varianceReason: "Counting error: Miscounted the 500s" });
     expect(await screen.findByText(/Who is signing in/)).toBeInTheDocument();
+  });
+
+  it("an exact count needs no reason", async () => {
+    const { api, s } = fakeServer();
+    await seedShift();
+    mount(api, "/s/Q01");
+    fireEvent.change(await screen.findByLabelText("Number of ₦1,000 notes"), { target: { value: "20" } });
+    fireEvent.click(screen.getByRole("button", { name: "Finish counting" }));
+    expect(await screen.findByTestId("variance")).toHaveTextContent(/Matches exactly/);
+    expect(screen.queryByLabelText(/why does the count not match/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /close shift and sign out/i }));
+    await waitFor(() => expect(s.closeInputs).toHaveLength(1));
+    expect(s.closeInputs[0]?.varianceReason).toBeUndefined();
+  });
+
+  it("the + and - buttons count notes, and you can go back to recount", async () => {
+    const { api } = fakeServer();
+    await seedShift();
+    mount(api, "/s/Q01");
+    await screen.findByRole("heading", { name: "Closing balance count" });
+    fireEvent.click(screen.getByRole("button", { name: "One more ₦500 note" }));
+    fireEvent.click(screen.getByRole("button", { name: "One more ₦500 note" }));
+    fireEvent.click(screen.getByRole("button", { name: "One fewer ₦500 note" }));
+    expect(screen.getByTestId("counted")).toHaveTextContent(/₦500/);
+    fireEvent.click(screen.getByRole("button", { name: "Finish counting" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Count again" }));
+    expect(await screen.findByTestId("counted")).toBeInTheDocument();
+  });
+
+  it("without an open shift there is nothing to count", async () => {
+    const { api } = fakeServer();
+    mount(api, "/s/Q01");
+    expect(await screen.findByText("No shift to count")).toBeInTheDocument();
   });
 });
 
@@ -393,5 +462,57 @@ describe("payment methods, credit and split payments", () => {
     expect(doc.getByText(/Paid: Cash/)).toBeInTheDocument();
     expect(doc.getByText(/Paid: Credit/)).toBeInTheDocument();
     expect(doc.getByText("Balance on credit")).toBeInTheDocument();
+  });
+});
+
+describe("variants must be scanned, so the wrong colour is not sold by mistake", () => {
+  it("a variant tile cannot be tapped into the cart; it says Scan to add and sends the cashier back to the scan box", async () => {
+    const { api } = fakeServer();
+    await seedShift();
+    mount(api, "/s/S01");
+    await screen.findByText("Clear phone case");
+    const clear = screen.getByRole("button", { name: /Clear phone case/ });
+    expect(clear).toHaveAttribute("aria-disabled", "true");
+    expect(within(clear).getByText("Scan to add")).toBeInTheDocument();
+    expect(within(clear).getByText("Clear")).toBeInTheDocument(); // the variant is shown big
+    fireEvent.click(clear);
+    expect(screen.getByTestId("total")).toHaveTextContent(/₦0/); // nothing was added
+    expect(screen.getByLabelText(/scan a barcode/i)).toHaveFocus();
+  });
+
+  it("scanning the barcode of the right variant adds exactly that variant", async () => {
+    const { api } = fakeServer();
+    await seedShift();
+    mount(api, "/s/S01");
+    await screen.findByText("Black phone case");
+    scan("6001000000134");
+    expect(await screen.findByTestId("total")).toHaveTextContent(/3,500/);
+  });
+
+  it("typing a name that matches only one variant does not add it on Enter (a barcode or SKU does)", async () => {
+    const { api } = fakeServer();
+    await seedShift();
+    mount(api, "/s/S01");
+    await screen.findByText("Black phone case");
+    scan("black");
+    expect(screen.getByTestId("total")).toHaveTextContent(/₦0/);
+    scan("CSE-BLK");
+    expect(await screen.findByTestId("total")).toHaveTextContent(/3,500/);
+  });
+
+  it("an item without variants can still be tapped", async () => {
+    const { api } = fakeServer();
+    await seedShift();
+    mount(api, "/s/S01");
+    fireEvent.click(await screen.findByRole("button", { name: /Phone charger 20W/ }));
+    expect(await screen.findByTestId("total")).toHaveTextContent(/6,500/);
+  });
+
+  it("a company can switch the rule off", async () => {
+    const { api } = fakeServer();
+    await seedShift();
+    mount(api, "/s/S01", { ...tenantJson, till: { ...tenantJson.till, scanRequiredForVariants: false } });
+    fireEvent.click(await screen.findByRole("button", { name: /Clear phone case/ }));
+    expect(await screen.findByTestId("total")).toHaveTextContent(/3,000/);
   });
 });

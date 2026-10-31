@@ -1,10 +1,13 @@
+import { AlertTriangle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type { Approval, ApprovalUnit } from "@erp/api-contract";
-import { mayDecideApproval, withinApprovalLimitFor } from "@erp/permissions";
+import type { Approval, ApprovalKind, ApprovalUnit, ShortageBearer } from "@erp/api-contract";
+import { currentStep, mayDecideApproval, withinApprovalLimitFor } from "@erp/permissions";
 import { ApiFailure } from "../api/client";
 import { t, type TextKey } from "../i18n";
 import { useSession } from "../state/session";
 import { useSync } from "../state/sync";
+import { findMixups } from "../features/stock/mixups";
+import { useMoney, useTenant } from "../state/tenant";
 import { ApprovalStatusBadge } from "../ui/ApprovalStatusBadge";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -25,9 +28,15 @@ const decisionMessage = (e: unknown): string => {
 };
 
 /** A01. The approvals inbox: who, what, the amount and the limit; a deliberate hold to approve; a reason to reject. */
-export function ApprovalsPage() {
+interface Props { kinds?: ApprovalKind[]; headingKey?: TextKey; subtitleKey?: TextKey; emptyKey?: TextKey }
+
+export function ApprovalsPage({ kinds, headingKey = "approval.title", subtitleKey = "approval.subtitle", emptyKey = "approval.empty" }: Props = {}) {
   const { api, token, caps } = useSession();
   const { state: connection } = useSync();
+  const money = useMoney();
+  const tenant = useTenant();
+  /** Who the ruler chose to bear each shortage, before they hold to confirm. */
+  const [bearers, setBearers] = useState<Record<string, ShortageBearer>>({});
   const [approvals, setApprovals] = useState<Approval[] | null>(null);
   const [error, setError] = useState<"unavailable" | "generic" | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -44,21 +53,21 @@ export function ApprovalsPage() {
     let live = true;
     setError(null);
     api.approvals(token)
-      .then((r) => { if (live) setApprovals(r.approvals); })
+      .then((r) => { if (live) setApprovals(kinds ? r.approvals.filter((a) => kinds.includes(a.kind)) : r.approvals); })
       .catch((e) => { if (live) setError(e instanceof ApiFailure && e.code === "unavailable" ? "unavailable" : "generic"); });
     return () => { live = false; };
-  }, [api, token, attempt]);
+  }, [api, token, attempt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!caps) return null;
 
-  const decide = async (approval: Approval, decision: "approve" | "reject", why?: string) => {
+  const decide = async (approval: Approval, decision: "approve" | "reject", why?: string, outcome?: ShortageBearer) => {
     const slot = `${approval.id}:${decision}`;
     let idempotencyKey = keys.current.get(slot);
     if (!idempotencyKey) { idempotencyKey = crypto.randomUUID(); keys.current.set(slot, idempotencyKey); }
     setBusy(approval.id);
     setDecisionError(null);
     try {
-      const res = await api.decideApproval(token ?? "", approval.id, { idempotencyKey, decision, reason: why });
+      const res = await api.decideApproval(token ?? "", approval.id, { idempotencyKey, decision, reason: why, outcome });
       keys.current.delete(slot);
       setApprovals((list) => list?.map((a) => (a.id === res.approval.id ? res.approval : a)) ?? null);
       setRejecting(null);
@@ -79,8 +88,8 @@ export function ApprovalsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t("approval.title")}</h1>
-        <p className="text-text-muted">{t("approval.subtitle")}</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t(headingKey)}</h1>
+        <p className="text-text-muted">{t(subtitleKey)}</p>
       </div>
 
       {offline && (
@@ -95,11 +104,11 @@ export function ApprovalsPage() {
       )}
 
       {!approvals && !error && <p role="status" className="text-text-muted">{t("app.loading")}</p>}
-      {approvals?.length === 0 && <p className="text-text-muted">{t("approval.empty")}</p>}
+      {approvals?.length === 0 && <p className="text-text-muted">{t(emptyKey)}</p>}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {approvals?.map((a) => {
-          const canDecide = mayDecideApproval(caps, a.kind, a.requestedBy.id);
+          const canDecide = mayDecideApproval(caps, { ...a, amount: 0 }); // role and turn; the amount limit is checked next
           const withinLimit = withinApprovalLimitFor(caps, a.kind, a.amount);
           const ownRequest = a.requestedBy.id === caps.user.id;
           return (
@@ -112,6 +121,18 @@ export function ApprovalsPage() {
                 <ApprovalStatusBadge status={a.status} />
               </div>
 
+              {a.kind === "cash_up" && a.cashUp ? (
+                <dl className="mt-4 grid gap-2 sm:grid-cols-3">
+                  <div className="rounded-xl bg-fill p-3"><dt className="text-text-muted">{t("approval.cashup.expected")}</dt><dd><Money amount={a.cashUp.expected} /></dd></div>
+                  <div className="rounded-xl bg-fill p-3"><dt className="text-text-muted">{t("approval.cashup.counted")}</dt><dd><Money amount={a.cashUp.counted} /></dd></div>
+                  <div className="rounded-xl bg-fill p-3">
+                    <dt className="text-text-muted">{t("approval.cashup.variance")}</dt>
+                    <dd className={`tabular font-bold ${a.cashUp.variance === 0 ? "text-success-ink" : "text-warning-ink"}`}>
+                      {a.cashUp.variance === 0 ? t("shift.variance.none") : t(a.cashUp.variance > 0 ? "shift.variance.over" : "shift.variance.short", { amount: money(Math.abs(a.cashUp.variance)) })}
+                    </dd>
+                  </div>
+                </dl>
+              ) : (
               <dl className="mt-4 grid gap-2 sm:grid-cols-2">
                 <div className="rounded-xl bg-fill p-3">
                   <dt className="text-text-muted">{t("approval.amount")}</dt>
@@ -128,7 +149,53 @@ export function ApprovalsPage() {
                   </div>
                 )}
               </dl>
+              )}
 
+              {a.shortage && (
+                <div className="mt-3 space-y-2 rounded-xl bg-fill p-3" data-testid={`shortage-${a.id}`}>
+                  <p className="font-semibold">{t("approval.shortage.transfer", { id: a.shortage.transferId })}
+                    {a.status === "pending" && Date.now() - Date.parse(a.requestedAt) > tenant.stock.shortageRulingHours * 3_600_000 && (
+                      <span className="ml-2 inline-flex items-center gap-1.5 rounded-full border border-border bg-danger-subtle px-3 py-1 font-semibold text-danger-ink"><AlertTriangle className="h-4 w-4" aria-hidden="true" />{t("approval.overdue")}</span>
+                    )}
+                  </p>
+                  <ul className="tabular">{a.shortage.lines.map((l) => <li key={l.productId}>{t("approval.shortage.line", { n: l.qtyMissing, name: l.name })}</li>)}</ul>
+                  {a.shortage.valueAtCost !== undefined && <p>{t("approval.shortage.value")}: <span className="tabular font-bold">{money(a.shortage.valueAtCost)}</span></p>}
+                  {a.shortage.receiverNote && <p className="text-text-muted">{t("approval.shortage.note", { note: a.shortage.receiverNote })}</p>}
+                  {a.shortage.bearer && <p className="font-semibold">{t("approval.bearer.result", { who: t(`approval.bearer.${a.shortage.bearer}` as TextKey) })}</p>}
+                </div>
+              )}
+              {a.remittance && (
+                <div className="mt-3 space-y-1 rounded-xl bg-fill p-3" data-testid={`remit-${a.id}`}>
+                  <p className="font-semibold">{t("approval.remit.from", { name: a.remittance.riderName })}</p>
+                  <p>{t("approval.remit.total")}: <span className="tabular font-bold">{money(a.remittance.total)}</span></p>
+                  <p className="tabular text-text-muted">{t("approval.remit.orders", { orders: a.remittance.orderIds.join(", ") })}</p>
+                </div>
+              )}
+              {a.writeOff && (
+                <div className="mt-3 space-y-2 rounded-xl bg-fill p-3" data-testid={`writeoff-${a.id}`}>
+                  <p className="font-semibold">{t("approval.writeoff.count", { id: a.writeOff.countId, where: t(`count.${a.writeOff.location}`) })}</p>
+                  <ul className="tabular">{a.writeOff.lines.map((l) => <li key={l.productId}>{t("approval.writeoff.line", { name: l.name, expected: l.expected, counted: l.counted })}{findMixups(a.writeOff!.lines).get(l.productId) && <span className="block font-medium text-warning-ink">{t("diff.mixup", { names: findMixups(a.writeOff!.lines).get(l.productId)!.join(", ") })}</span>}</li>)}</ul>
+                  {a.writeOff.valueAtCost !== undefined && <p>{t("approval.writeoff.value")}: <span className="tabular font-bold">{money(a.writeOff.valueAtCost)}</span></p>}
+                  {a.writeOff.note && <p className="text-text-muted">{t("approval.writeoff.note", { note: a.writeOff.note })}</p>}
+                </div>
+              )}
+              {a.refund && (
+                <div className="mt-3 rounded-xl bg-fill p-3" data-testid={`refund-${a.id}`}>
+                  <p className="font-semibold">{t("approval.refund.sale", { invoice: a.refund.invoiceNo })} · {t("approval.refund.total")}: <span className="tabular">{money(a.refund.refundTotal)}</span></p>
+                  <ul className="tabular text-text-muted">{a.refund.lines.map((l) => <li key={l.productId}>{l.qty} × {l.name}: {money(l.amount)}</li>)}</ul>
+                </div>
+              )}
+              {a.steps && a.steps.length > 0 && (
+                <ol className="mt-3 space-y-2" aria-label={t("approval.chain")}>
+                  {a.steps.map((st, i) => (
+                    <li key={i} className="flex flex-wrap items-center gap-2 rounded-xl bg-fill p-3" data-testid={`step-${a.id}-${i}`}>
+                      <span className="font-semibold">{t("approval.step", { n: i + 1, total: a.steps!.length, roles: st.roles.join(" or ") })}</span>
+                      <ApprovalStatusBadge status={st.status} />
+                      {st.decidedBy && <span className="text-text-muted">{t("approval.decidedBy", { name: st.decidedBy.name })}</span>}
+                    </li>
+                  ))}
+                </ol>
+              )}
               {a.requestNote && <p className="mt-3"><span className="text-text-muted">{t("approval.note")}: </span>{a.requestNote}</p>}
               {a.status !== "pending" && a.decidedBy && (
                 <p className="mt-2 text-text-muted">
@@ -142,17 +209,28 @@ export function ApprovalsPage() {
                   {offline ? (
                     <p className="rounded-xl bg-warning-subtle p-3 text-warning-ink">{t("approval.offline")}</p>
                   ) : canDecide && withinLimit ? (
+                    <div className="space-y-3">
+                    {a.kind === "shortage" && (
+                      <label className="block">
+                        <span className="font-semibold">{t("approval.bearer.label")}</span>
+                        <select value={bearers[a.id] ?? ""} onChange={(e) => setBearers((b) => ({ ...b, [a.id]: e.target.value as ShortageBearer }))} className="mt-1 min-h-touch w-full rounded-xl border border-border-strong bg-surface-raised px-3 text-lg">
+                          <option value="">{t("approval.bearer.choose")}</option>
+                          {(["branch", "warehouse", "transit"] as const).map((b) => <option key={b} value={b}>{t(`approval.bearer.${b}`)}</option>)}
+                        </select>
+                      </label>
+                    )}
                     <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
                       <HoldToConfirm
                         label={t("approval.hold")}
                         hint={t("approval.holdHint")}
-                        disabled={busy === a.id}
-                        onConfirm={() => void decide(a, "approve")}
+                        disabled={busy === a.id || (a.kind === "shortage" && !bearers[a.id])}
+                        onConfirm={() => void decide(a, "approve", undefined, a.kind === "shortage" ? bearers[a.id] : undefined)}
                       />
                       <Button variant="subtle" disabled={busy === a.id} onClick={() => openReject(a)}>{t("approval.reject")}</Button>
                     </div>
+                    </div>
                   ) : (
-                    <p className="text-text-muted">{ownRequest ? t("approval.own") : canDecide ? t("approval.aboveLimit") : t("approval.notYours")}</p>
+                    <p className="text-text-muted">{ownRequest ? t("approval.own") : canDecide ? t("approval.aboveLimit") : a.steps && currentStep(a) && !a.steps.some((st) => st.roles.some((r) => caps.roles.includes(r)) && st.status === "pending") && a.steps.some((st) => st.roles.some((r) => caps.roles.includes(r))) ? t("approval.waiting", { roles: currentStep(a)?.step.roles.join(" or ") ?? "" }) : t("approval.notYours")}</p>
                   )}
                 </div>
               )}

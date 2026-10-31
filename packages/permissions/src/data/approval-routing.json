@@ -1,0 +1,55 @@
+{
+  "_help": "Who decides each kind of approval. Each kind lists ordered steps; a step lists the roles allowed to decide it. The same person can never decide two steps of one request, and the requester can never decide any. A kind that is missing here falls back to the Approve letter in the roles matrix. Role names must match the matrix exactly. See docs/APPROVAL-ROUTING.md.",
+  "cash_up": [
+    {
+      "roles": [
+        "Branch manager",
+        "Cash controller"
+      ]
+    }
+  ],
+  "refund": [
+    {
+      "roles": [
+        "Branch manager",
+        "MD / Executive"
+      ]
+    },
+    {
+      "roles": [
+        "Cash controller",
+        "MD / Executive"
+      ]
+    }
+  ],
+  "shortage": [
+    {
+      "roles": [
+        "Auditor",
+        "MD / Executive"
+      ]
+    }
+  ],
+  "write_off": [
+    {
+      "roles": [
+        "Branch manager",
+        "MD / Executive"
+      ]
+    },
+    {
+      "roles": [
+        "Auditor",
+        "MD / Executive"
+      ]
+    }
+  ],
+  "cash_remittance": [
+    {
+      "roles": [
+        "Branch manager",
+        "Cash controller"
+      ]
+    }
+  ]
+}

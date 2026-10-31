@@ -14,7 +14,15 @@
     "bank": { "name": "Sample Bank", "accountName": "Demo Retail Ltd", "accountNumber": "0000000000" }
   },
   "tax": { "mode": "inclusive", "vatRate": 0.075, "vatNumber": "TIN 00000000-0001" },
-  "till": { "paymentMethods": ["cash", "transfer", "card", "credit", "other"], "allowSplitPayments": true },
+  "till": { "paymentMethods": ["cash", "transfer", "card", "credit", "other"], "allowSplitPayments": true, "scanRequiredForVariants": true },
+  "cashUp": {
+    "denominations": [1000, 500, 200, 100, 50, 20, 10, 5],
+    "varianceReasons": ["Counting error", "Change given wrongly", "Cash taken for an expense", "Unknown"]
+  },
+  "returns": { "reasons": ["Faulty item", "Wrong item supplied", "Customer changed their mind", "Damaged in transit", "Other"],
+    "rules": { "defaultDays": 7, "faultyDays": 30, "faultyReasons": ["Faulty item", "Damaged in transit"], "byCategory": { "Audio": { "days": 3 } }, "byProduct": {} } },
+  "delivery": { "failedReasons": ["Customer not reachable", "Wrong address", "Customer refused", "Item damaged", "Other"], "codRemitHours": 24 },
+  "stock": { "inTransitAlertHours": 24, "shortageRulingHours": 48, "recountByDifferentPerson": true },
   "offline": { "maxOfflineSalesPerTill": 50, "syncWindowHours": 12 },
   "security": { "idleLockMinutes": 5 },
   "touch": { "minPx": 48, "tillPx": 56 }

@@ -33,6 +33,14 @@ export interface LocalSale {
   synced: boolean;
 }
 
+/** A refund recorded on this till. A cash refund leaves the drawer, so the expected closing balance goes down. */
+export interface LocalRefund {
+  key: string; shiftId: string; invoiceNo: string; returnNo: string; refundTotal: number; refundPaid: number; refundToBalance: number;
+  method: "cash" | "transfer" | "card" | "other"; at: string;
+}
+export const refundKey = (userId: string, key: string) => `refund:${userId}:${key}`;
+export const listRefunds = async (s: Storage, userId: string) => s.kv.list<LocalRefund>(`refund:${userId}:`);
+
 export const shiftKey = (userId: string) => `shift:${userId}`;
 export const saleKey = (userId: string, key: string) => `sale:${userId}:${key}`;
 export const salePrefix = (userId: string) => `sale:${userId}:`;
@@ -42,7 +50,8 @@ export const listSales = async (s: Storage, userId: string) =>
   (await s.kv.list<LocalSale>(salePrefix(userId))).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
 /** Expected cash in the drawer: opening float plus the CASH payments of this shift (card, transfer and credit never enter the drawer). */
-export function expectedCash(shift: LocalShift, sales: readonly LocalSale[]): number {
-  return shift.openingFloat + sales.filter((x) => x.shiftId === shift.id).reduce((n, x) => n + cashOf(x.payments), 0);
+export function expectedCash(shift: LocalShift, sales: readonly LocalSale[], refunds: readonly LocalRefund[] = []): number {
+  const cashOut = refunds.filter((r) => r.shiftId === shift.id && r.method === "cash").reduce((n, r) => n + r.refundPaid, 0);
+  return shift.openingFloat - cashOut + sales.filter((x) => x.shiftId === shift.id).reduce((n, x) => n + cashOf(x.payments), 0);
 }
 export const provisionalNumber = (key: string) => `OFF-${key.replace(/-/g, "").slice(0, 6).toUpperCase()}`;

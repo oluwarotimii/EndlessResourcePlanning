@@ -38,6 +38,9 @@ importers:
       '@erp/permissions':
         specifier: workspace:*
         version: link:../../packages/permissions
+      '@erp/tenant-config':
+        specifier: workspace:*
+        version: link:../../packages/tenant-config
     devDependencies:
       tsx:
         specifier: ^4.19.0

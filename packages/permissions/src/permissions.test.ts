@@ -8,6 +8,9 @@ const TASK_ROLES = ["Cashier", "Rider / courier", "Technician"];
 const caps = (role: string): Capabilities => ({
   user: { id: "u", name: "Test" }, roles: [role], areas: areasForRoles([role]), scope: {},
 });
+type Kind = "discount" | "void" | "credit_over_limit" | "cash_up";
+const ap = (kind: Kind, requester: string, amount = 1, extra: Record<string, unknown> = {}) =>
+  ({ kind, requestedBy: { id: requester, name: requester }, amount, status: "pending" as const, ...extra });
 const nav = (role: string) => buildNavigation({ caps: caps(role), taskRoles: TASK_ROLES, enabledScopes: ["MVP"] });
 
 describe("generated fixtures", () => {
@@ -64,13 +67,13 @@ describe("who may decide an approval", () => {
   });
 
   it("needs the approve letter on that area", () => {
-    expect(mayDecideApproval(caps("Branch manager"), "discount", "u-cashier")).toBe(true);
-    expect(mayDecideApproval(caps("Cashier"), "discount", "u-manager")).toBe(false);
-    expect(mayDecideApproval(caps("Warehouse officer"), "void", "u-cashier")).toBe(false);
+    expect(mayDecideApproval(caps("Branch manager"), ap("discount", "u-cashier"))).toBe(true);
+    expect(mayDecideApproval(caps("Cashier"), ap("discount", "u-manager"))).toBe(false);
+    expect(mayDecideApproval(caps("Warehouse officer"), ap("void", "u-cashier"))).toBe(false);
   });
 
   it("never lets the creator approve their own request", () => {
-    expect(mayDecideApproval(caps("Branch manager"), "discount", "u")).toBe(false);
+    expect(mayDecideApproval(caps("Branch manager"), ap("discount", "u"))).toBe(false);
   });
 
   it("reads the approver limit from the approval-limits table", () => {
@@ -85,7 +88,87 @@ describe("who may decide an approval", () => {
     expect(withinApprovalLimit("Branch manager", "void", 50001)).toBe(false);
     expect(withinApprovalLimit("Branch manager", "credit_over_limit", 999999)).toBe(true);
     expect(withinApprovalLimit("MD / Executive", "discount", 99)).toBe(true);
-    expect(mayDecideApproval(caps("Branch manager"), "discount", "u-cashier", 5)).toBe(false);
-    expect(mayDecideApproval(caps("Branch manager"), "discount", "u-cashier", 2)).toBe(true);
+    expect(mayDecideApproval(caps("Branch manager"), ap("discount", "u-cashier", 5))).toBe(false);
+    expect(mayDecideApproval(caps("Branch manager"), ap("discount", "u-cashier", 2))).toBe(true);
+  });
+});
+
+describe("cash-up sign-off (owner to confirm the approver, see docs/DECISIONS.md)", () => {
+  it("the Branch manager and the Cash controller may approve a cash-up; the Cashier may not", async () => {
+    const { can, areasForRoles: areas, withinApprovalLimit, approvalArea } = await import("./index");
+    const caps = (role: string) => ({ user: { id: "u", name: "T" }, roles: [role], areas: areas([role]), scope: {} });
+    expect(approvalArea("cash_up")).toBe("Cash-up");
+    expect(can(caps("Branch manager"), "Cash-up", "A")).toBe(true);
+    expect(can(caps("Cash controller"), "Cash-up", "A")).toBe(true);
+    expect(can(caps("Cashier"), "Cash-up", "A")).toBe(false);
+    expect(withinApprovalLimit("Branch manager", "cash_up", 999999)).toBe(true); // a sign-off, no naira cap
+  });
+});
+
+describe("who decides is a setting (approval routing)", () => {
+  const step = (roles: string[], status: "pending" | "approved" = "pending", by?: string) => ({ roles, status, ...(by ? { decidedBy: { id: by, name: by } } : {}) });
+
+  it("every role named in the routing file exists in the roles matrix (typo guard)", async () => {
+    const { APPROVAL_ROUTING, ROLE_MATRIX } = await import("./index");
+    for (const [kind, steps] of Object.entries(APPROVAL_ROUTING)) {
+      for (const r of steps ?? []) for (const role of r.roles) expect(Object.keys(ROLE_MATRIX), `${kind}: ${role}`).toContain(role);
+    }
+  });
+  it("a kind with no routing has no chain and falls back to the matrix letter", async () => {
+    const { stepsFor } = await import("./index");
+    expect(stepsFor("discount", {})).toBeUndefined();
+    expect(stepsFor("cash_up", { cash_up: [{ roles: ["Auditor"] }] })).toEqual([{ roles: ["Auditor"], status: "pending" }]);
+  });
+  it("with a chain only the roles of the CURRENT step may decide", () => {
+    const chain = [step(["Branch manager"]), step(["MD / Executive"])];
+    expect(mayDecideApproval(caps("Branch manager"), ap("credit_over_limit", "u-cashier", 1, { steps: chain }))).toBe(true);
+    expect(mayDecideApproval(caps("MD / Executive"), ap("credit_over_limit", "u-cashier", 1, { steps: chain }))).toBe(false); // not their turn yet
+    const afterFirst = [step(["Branch manager"], "approved", "u-boss"), step(["MD / Executive"])];
+    expect(mayDecideApproval(caps("MD / Executive"), ap("credit_over_limit", "u-cashier", 1, { steps: afterFirst }))).toBe(true);
+    expect(mayDecideApproval(caps("Branch manager"), ap("credit_over_limit", "u-cashier", 1, { steps: afterFirst }))).toBe(false);
+  });
+  it("a role not in the matrix as an approver can still be named in the routing (for example the Auditor)", () => {
+    expect(mayDecideApproval(caps("Auditor"), ap("cash_up", "u-cashier", 1))).toBe(false); // no chain: matrix says no
+    expect(mayDecideApproval(caps("Auditor"), ap("cash_up", "u-cashier", 1, { steps: [step(["Auditor"])] }))).toBe(true);
+    expect(mayDecideApproval(caps("Branch manager"), ap("cash_up", "u-cashier", 1, { steps: [step(["Auditor"])] }))).toBe(false);
+  });
+  it("one person can never decide two steps of the same request", () => {
+    const chain = [step(["Branch manager", "MD / Executive"], "approved", "u"), step(["Branch manager", "MD / Executive"])];
+    const me = { ...caps("Branch manager"), user: { id: "u", name: "u" } };
+    expect(mayDecideApproval(me, ap("credit_over_limit", "u-cashier", 1, { steps: chain }))).toBe(false);
+    const md = { ...caps("MD / Executive"), user: { id: "u-md", name: "MD" } };
+    expect(mayDecideApproval(md, ap("credit_over_limit", "u-cashier", 1, { steps: chain }))).toBe(true); // a different person
+  });
+  it("a finished approval can no longer be decided", () => {
+    expect(mayDecideApproval(caps("Branch manager"), ap("discount", "u-cashier", 1, { status: "approved" }))).toBe(false);
+  });
+});
+
+describe("the inbox follows the approval setting, not a fixed role list", () => {
+  it("anyone named in the routing sees the approvals inbox, even a role the matrix gives no Approve letter (Auditor)", () => {
+    const ids = (role: string) => nav(role).visible.map((s) => s.id);
+    expect(ids("Auditor")).toContain("A01"); // named in the shortage routing
+    expect(ids("Cash controller")).toContain("A01");
+    expect(ids("Cash controller")).toContain("Q02"); // may approve a closing balance
+    expect(ids("Cashier")).not.toContain("A01");
+    expect(ids("Warehouse officer")).not.toContain("A01");
+  });
+  it("the Branch manager does not rule on shortages (they receive the stock); the Auditor and MD do", async () => {
+    const { mayApproveKind } = await import("./index");
+    expect(mayApproveKind(caps("Branch manager"), "shortage")).toBe(false);
+    expect(mayApproveKind(caps("Auditor"), "shortage")).toBe(true);
+    expect(mayApproveKind(caps("MD / Executive"), "shortage")).toBe(true);
+    expect(mayApproveKind(caps("Branch manager"), "shortage", { shortage: [{ roles: ["Branch manager"] }] })).toBe(true); // the setting wins
+  });
+});
+
+describe("stock count access (K01/K02)", () => {
+  it("anyone who may create counts can open K01, so a different person can do the recount; K02 stays with the Stock controller", () => {
+    const ids = (role: string) => nav(role).visible.map((s) => s.id);
+    expect(ids("Stock controller")).toEqual(expect.arrayContaining(["K01", "K02"]));
+    expect(ids("Warehouse officer")).toContain("K01");
+    expect(ids("Branch manager")).toContain("K01");
+    expect(ids("Warehouse officer")).not.toContain("K02");
+    expect(ids("Cashier")).not.toContain("K01");
   });
 });

@@ -183,7 +183,7 @@
  {
   "id": "S03",
   "area": "Stores (POS)",
-  "title": "Shift open and close",
+  "title": "Open and close shift",
   "roles": [
    "Cashier"
   ],
@@ -529,7 +529,7 @@
  {
   "id": "K02",
   "area": "Stock control",
-  "title": "Variance list and write-off request",
+  "title": "Count differences and write-off request",
   "roles": [
    "Stock controller"
   ],
@@ -741,7 +741,7 @@
  {
   "id": "Q01",
   "area": "Cash-up",
-  "title": "Cash-up count",
+  "title": "Closing balance count",
   "roles": [
    "Cashier"
   ],
@@ -756,7 +756,7 @@
  {
   "id": "Q02",
   "area": "Cash-up",
-  "title": "Cash-up sign-off",
+  "title": "Closing balance approval",
   "roles": [
    "Branch manager"
   ],
@@ -771,7 +771,7 @@
  {
   "id": "Q03",
   "area": "Cash-up",
-  "title": "Cross-branch cash-up review and deposit match",
+  "title": "Cross-branch closing balance review and bank deposit",
   "roles": [
    "Cash controller"
   ],
@@ -1065,7 +1065,7 @@
  {
   "id": "G01",
   "area": "Reporting",
-  "title": "Loss report: cash-up variance by branch and cashier",
+  "title": "Loss report: closing balance differences by cashier",
   "roles": [
    "Branch manager",
    "MD / Executive"
@@ -1129,7 +1129,7 @@
  {
   "id": "G05",
   "area": "Reporting",
-  "title": "Loss report: count variance and write-offs",
+  "title": "Loss report: stock count differences and write-offs",
   "roles": [
    "Auditor",
    "MD / Executive"
@@ -1415,7 +1415,7 @@
  {
   "id": "EX03",
   "area": "Expenses",
-  "title": "Petty cash float and reconciliation",
+  "title": "Petty cash balance and reconciliation",
   "roles": [
    "Branch manager",
    "Cash controller"

@@ -26,3 +26,16 @@ Any change to what the product does, to a setting, to a rule or to a decision mu
 - `docs/source/Product-Requirements.md` and `docs/source/Frontend-Plan.md`: append to their "Amendments" section when the requirement or plan itself changes. Never silently rewrite the original text.
 - Say in the reply what was documented, and what could not be decided and was recorded as an open question.
 Read `docs/HANDOVER.md` first if you are new to this repo.
+
+## ERPNext (Frappe) is the back end: keep it in mind for every build
+- Before building, ask how it will live in ERPNext. Add or update a row in `docs/ERPNEXT-MAPPING.md` in the same change, marked **Owner**, **Seen** or **Proposal**. Never present a Proposal as fact; add open questions to the end of that file.
+- Start from what the owner's documents already name (the "What ERPNext offers" column in `Screen-Inventory.xlsx`, the custom Frappe app in the requirements).
+- Prefer shapes that map cleanly: one write per business event, an idempotency key on every write, roles and approvals as workflow steps, costs and cost centres kept on the server.
+- `pnpm check:docs` fails if an approval kind or queued action is not in the mapping, or an API path the mock exposes is not in `docs/FRAPPE-APP-SPEC.md`.
+- A new endpoint, doctype, custom field, workflow, setting or report also goes into `docs/FRAPPE-APP-SPEC.md` (the build list for the custom Frappe app).
+- When something needs the owner's decision, explain it as a short story with numbers in `docs/SCENARIOS.md`, not only as a line in `docs/DECISIONS.md`.
+
+## Working preferences of the owner (follow these)
+- **Plain words for users.** Staff must understand every label quickly. Say "opening balance" and "closing balance" (not float or cash-up), "approve" (not sign off), "difference" (not variance). Keep internal names only in code, settings keys and the spreadsheets; `docs/GLOSSARY.md` has the mapping. Screen titles that differ from the spreadsheet go in `packages/permissions/src/data/title-overrides.json`.
+- **Do not produce a zip or a patch unless the owner asks for one.** Work in the working copy and say where the changes are.
+- Who approves what is a setting (`docs/APPROVAL-ROUTING.md`); never hard-code an approver.

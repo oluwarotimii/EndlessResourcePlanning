@@ -10,6 +10,11 @@ export const USERS: MockUser[] = [
   { id: "u-stock", name: "Ibrahim Musa", role: "Stock controller", pin: "4444", branch: "Pilot Branch", warehouse: "Main Warehouse" },
   { id: "u-rider", name: "Chidi Okafor", role: "Rider / courier", pin: "5555", branch: "Pilot Branch" },
   { id: "u-coordinator", name: "Sade Adeyemi", role: "Delivery coordinator", pin: "6666", branch: "Pilot Branch" },
+  // Extra people so approval chains can be tried (the pilot roles above are the six in the plan).
+  { id: "u-md", name: "Kunle Adebayo", role: "MD / Executive", pin: "7777", branch: "Pilot Branch" },
+  { id: "u-auditor", name: "Hauwa Bello", role: "Auditor", pin: "8888", branch: "Pilot Branch" },
+  { id: "u-cashctl", name: "Ifeoma Nwosu", role: "Cash controller", pin: "9999", branch: "Pilot Branch" },
+  { id: "u-rider2", name: "Femi Adewale", role: "Rider / courier", pin: "1212", branch: "Pilot Branch" },
 ];
 
 export const TASKS: Record<string, Task[]> = {
@@ -42,7 +47,7 @@ export const TASKS: Record<string, Task[]> = {
   ],
 };
 
-import type { Approval, Customer, Product } from "@erp/api-contract";
+import type { Approval, Customer, DeliveryOrder, Product } from "@erp/api-contract";
 
 /**
  * Work waiting in the approvals inbox. AP-0004 was raised by the branch manager,
@@ -73,17 +78,19 @@ export const APPROVALS: Approval[] = [
 
 /** Prices are whole naira, VAT-inclusive. Barcodes are fixtures for the demo scanner. */
 export const PRODUCTS: Product[] = [
-  { id: "p1", sku: "CHG-20W", barcode: "6001000000011", name: "Phone charger 20W", price: 6500, stock: 40, category: "Accessories" },
+  { id: "p1", sku: "CHG-20W", barcode: "6001000000011", name: "Phone charger 20W", price: 6500, stock: 40, category: "Accessories", family: "Phone charger", variant: "20W" },
   { id: "p2", sku: "CBL-USBC", barcode: "6001000000028", name: "USB-C cable 1m", price: 2500, stock: 120, category: "Accessories" },
   { id: "p3", sku: "EAR-BT", barcode: "6001000000035", name: "Bluetooth earbuds", price: 18500, stock: 25, category: "Audio" },
   { id: "p4", sku: "PWR-10K", barcode: "6001000000042", name: "Power bank 10,000mAh", price: 14000, stock: 18, category: "Accessories" },
   { id: "p5", sku: "SCR-GLS", barcode: "6001000000059", name: "Screen protector", price: 1500, stock: 200, category: "Accessories" },
-  { id: "p6", sku: "CSE-CLR", barcode: "6001000000066", name: "Clear phone case", price: 3000, stock: 75, category: "Accessories" },
+  { id: "p6", sku: "CSE-CLR", barcode: "6001000000066", name: "Clear phone case", price: 3000, stock: 75, category: "Accessories", family: "Phone case", variant: "Clear" },
   { id: "p7", sku: "SPK-MINI", barcode: "6001000000073", name: "Mini speaker", price: 22000, stock: 12, category: "Audio" },
   { id: "p8", sku: "MEM-64", barcode: "6001000000080", name: "Memory card 64GB", price: 7500, stock: 60, category: "Storage" },
   { id: "p9", sku: "USB-32", barcode: "6001000000097", name: "USB flash drive 32GB", price: 4500, stock: 80, category: "Storage" },
   { id: "p10", sku: "MOU-WL", barcode: "6001000000103", name: "Wireless mouse", price: 8500, stock: 30, category: "Computing" },
   { id: "p11", sku: "KBD-USB", barcode: "6001000000110", name: "USB keyboard", price: 11000, stock: 22, category: "Computing" },
+  { id: "p13", sku: "CSE-BLK", barcode: "6001000000134", name: "Black phone case", price: 3500, stock: 60, category: "Accessories", family: "Phone case", variant: "Black" },
+  { id: "p14", sku: "CHG-30W", barcode: "6001000000141", name: "Phone charger 30W", price: 8500, stock: 30, category: "Accessories", family: "Phone charger", variant: "30W" },
   { id: "p12", sku: "ADP-HDMI", barcode: "6001000000127", name: "HDMI adapter", price: 5500, stock: 35, category: "Computing" },
 ];
 
@@ -91,4 +98,18 @@ export const CUSTOMERS: Customer[] = [
   { id: "c1", name: "Ade Stores", phone: "0803 000 0001", creditLimit: 200000, balance: 50000 },
   { id: "c2", name: "Bola Ventures", phone: "0803 000 0002", creditLimit: 100000, balance: 95000 },
   { id: "c3", name: "Chioma Okeke", phone: "0803 000 0003" }, // no credit terms: cash customer only
+];
+
+/**
+ * Cost prices, kept on the server only. The screens never receive them: cost prices are hidden from most roles.
+ * A shortage is valued at cost and that value is shown only to the people who rule on it.
+ */
+export const COST_PRICE: Record<string, number> = Object.fromEntries(PRODUCTS.map((p) => [p.id, Math.round(p.price * 0.7)]));
+
+/** Online orders waiting to be delivered (in ERPNext these come from Sales Orders and Delivery Notes). */
+export const DELIVERY_ORDERS: DeliveryOrder[] = [
+  { id: "DO-0001", customerName: "Ngozi Chukwu", phone: "0803 111 0001", address: "12 Admiralty Way, Lekki, Lagos", items: [{ productId: "p3", name: "Bluetooth earbuds", qty: 1 }], payment: "cash_on_delivery", amountDue: 18500, status: "pending", remitted: false, createdAt: "2026-11-02T07:30:00.000Z" },
+  { id: "DO-0002", customerName: "Tosin Balogun", phone: "0803 111 0002", address: "5 Allen Avenue, Ikeja, Lagos", items: [{ productId: "p1", name: "Phone charger 20W", qty: 2 }, { productId: "p2", name: "USB-C cable 1m", qty: 2 }], payment: "prepaid", amountDue: 0, status: "pending", remitted: false, createdAt: "2026-11-02T07:45:00.000Z" },
+  { id: "DO-0003", customerName: "Emeka Obi", phone: "0803 111 0003", address: "20 Ogunlana Drive, Surulere, Lagos", items: [{ productId: "p7", name: "Mini speaker", qty: 1 }], payment: "cash_on_delivery", amountDue: 22000, status: "pending", remitted: false, createdAt: "2026-11-02T08:00:00.000Z" },
+  { id: "DO-0004", customerName: "Aisha Bello", phone: "0803 111 0004", address: "8 Herbert Macaulay Way, Yaba, Lagos", items: [{ productId: "p10", name: "Wireless mouse", qty: 1 }], payment: "prepaid", amountDue: 0, status: "pending", remitted: false, createdAt: "2026-11-02T08:10:00.000Z" },
 ];

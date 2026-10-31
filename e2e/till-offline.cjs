@@ -34,9 +34,9 @@ const step = (m) => console.log("•", m);
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.waitForTimeout(1500); // let the service worker finish caching every screen
 
-  step("open the shift with a 20,000 float");
+  step("open the shift with a 20,000 opening balance");
   await page.goto(`${BASE}/s/S03`);
-  await page.getByLabel(/opening float/i).fill("20000");
+  await page.getByLabel(/opening balance/i).fill("20000");
   await page.getByRole("button", { name: "Open shift" }).click();
   await page.getByRole("heading", { name: "Close shift" }).waitFor();
 
@@ -111,9 +111,37 @@ const step = (m) => console.log("•", m);
   });
   assert.equal(owes - balanceBefore, 3500, "the receivable was recorded exactly once");
 
-  step("shift expected cash = float + CASH payments only (card, credit excluded): 20,000 + 15,500 + 3,000");
-  await page.goto(`${BASE}/s/S03`);
+  step("closing balance (blind count): expected cash = opening balance + CASH payments only (card and credit excluded): 20,000 + 15,500 + 3,000 = 38,500");
+  await page.goto(`${BASE}/s/Q01`);
+  assert.equal(await page.getByTestId("expected").count(), 0, "the count is blind: expected cash is hidden until counting is finished");
+  await page.getByLabel("Number of ₦1,000 notes").fill("38");
+  await page.getByLabel("Number of ₦500 notes").fill("1");
+  await page.getByRole("button", { name: "Finish counting" }).click();
   assert.match(await page.getByTestId("expected").innerText(), /38,500/);
+  assert.match(await page.getByTestId("variance").innerText(), /Matches exactly/);
+  await shot(page, "e2e-5-cashup-review");
+  await page.getByRole("button", { name: /close shift and sign out/i }).click();
+  await page.getByText(/Who is signing in/).waitFor();
+
+  step("a manager approves the closing balance (the cashier cannot sign off their own)");
+  const mgr = await ctx.newPage();
+  await mgr.goto(`${BASE}/login`);
+  await mgr.getByRole("button", { name: /Tunde/ }).click();
+  for (const d of "2222") await mgr.getByRole("group", { name: /keypad/i }).getByRole("button", { name: d, exact: true }).click();
+  await mgr.waitForSelector('h1:has-text("Hello")');
+  await mgr.goto(`${BASE}/s/A02`);
+  await mgr.getByTestId("cashups-awaiting").waitFor();
+  assert.ok(Number(await mgr.getByTestId("cashups-awaiting").innerText()) >= 1, "the manager home counts the closing balance waiting");
+  await shot(mgr, "e2e-6-manager-home");
+  await mgr.goto(`${BASE}/s/Q02`);
+  const card = mgr.locator('[data-testid^="approval-"]').filter({ hasText: "Matches exactly" }).first();
+  await card.waitFor();
+  await card.getByRole("button", { name: /hold to approve/i }).dispatchEvent("pointerdown");
+  await mgr.waitForTimeout(1200);
+  await card.getByText(/Approved/i).first().waitFor();
+  await mgr.goto(`${BASE}/s/G01`);
+  await mgr.getByRole("heading", { name: "Closing balance differences" }).waitFor();
+  await shot(mgr, "e2e-7-variance-report");
   await browser.close();
   console.log("E2E PASSED");
 })().catch((e) => { console.error("E2E FAILED:", e); process.exit(1); });

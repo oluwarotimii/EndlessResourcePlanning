@@ -96,3 +96,9 @@ The text above is the original. Full log: `docs/PRODUCT-CHANGELOG.md`.
 - **Offline model:** save first, then send; one idempotency key per write; replay in order per shift; never under another identity; a service worker caches the app shell so the till opens with no network.
 - **Sprint 2 scope delivered** and **credit/split payments and VAT modes** added (see changelog). The sprint plan above is otherwise unchanged; Sprint 3 absorbs the manager-approval half of credit sales.
 - **Documentation rule:** product changes must update the handover documents in the same change (`CLAUDE.md`).
+- **Sprint 3 so far:** the approvals engine and inbox, the needs-manager request, the over-limit credit approval, the cash-up count and sign-off, the manager home and the variance report. Remaining: customer returns (T01) and the branch stock request (H02).
+- **Sprint 3 is complete:** approvals engine and inbox, needs-manager request, over-limit credit approval, closing balance count and approval, manager home, closing balance differences report, approver routing as a setting, customer returns and the branch stock request. Next is Sprint 4.
+- **Sprint 4 so far:** stock transfers (pack and send, receive), stock lookup and the in-transit report. Remaining: blind stock count, count differences and write-off request, and the delivery screens.
+- **ERPNext mapping.** Every build maps what it adds to ERPNext in `docs/ERPNEXT-MAPPING.md` (Owner, Seen or Proposal), with open questions to answer on the staging site before the adapter (Sprint 5).
+- **Sprint 4 so far:** transfers, stock lookup, in-transit report, shortage ruling, and the blind stock count with recount and write-off. Remaining: the delivery screens.
+- **Sprint 4 is complete:** transfers, stock lookup, in-transit report, shortage ruling, stock count with recount and write-off, delivery, and variant safeguards. Next is Sprint 5 (the ERPNext adapter) using `docs/FRAPPE-APP-SPEC.md`.

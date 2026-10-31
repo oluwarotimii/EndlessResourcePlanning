@@ -1,0 +1,8 @@
+[
+ {
+  "role": "Branch manager",
+  "area": "Cash-up",
+  "add": "A",
+  "reason": "Product-Requirements journey 3 says the cash controller OR the manager signs off the cash-up, and screen Q02 lists Branch manager, but the matrix gave only Cash controller and MD the Approve step. Default chosen on 2026-10-31; owner to confirm (docs/DECISIONS.md)."
+ }
+]

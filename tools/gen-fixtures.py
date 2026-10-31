@@ -17,6 +17,12 @@ for r in rows[hi + 1:]:
     if not r[0] or r[0].startswith(("Shading", "Changes")):
         break
     matrix[r[0]] = {a: (r[1 + i] or "") for i, a in enumerate(areas) if r[1 + i]}
+# Documented overrides of the spreadsheet (see docs/DECISIONS.md). The spreadsheet itself is never edited.
+amend_path = out / "matrix-amendments.json"
+if amend_path.exists():
+    for a in json.loads(amend_path.read_text()):
+        have = matrix[a["role"]].get(a["area"], "")
+        matrix[a["role"]][a["area"]] = "".join(sorted(set(have + a["add"])))
 (out / "roles-matrix.json").write_text(json.dumps({"areas": areas, "roles": matrix}, indent=1))
 
 # ---- Approval limits
@@ -47,6 +53,12 @@ for r in rows[hi + 1:]:
         roles += alias.get(part, [part] if part in matrix else [])
     screens.append({"id": r[0], "area": r[1], "title": r[2], "roles": sorted(set(roles)), "erpnext": r[4],
                     "verdict": r[5], "pattern": r[6], "device": r[7], "offline": r[8], "scope": r[9], "sprint": r[10]})
+# Plain-word titles (docs/GLOSSARY.md): merged over the spreadsheet titles, the spreadsheet is never edited.
+titles_path = out / "title-overrides.json"
+if titles_path.exists():
+    overrides = {k: v for k, v in json.loads(titles_path.read_text()).items() if not k.startswith("_")}
+    for sc in screens:
+        sc["title"] = overrides.get(sc["id"], sc["title"])
 (out / "screens.json").write_text(json.dumps(screens, indent=1))
 print(len(areas), "areas;", len(matrix), "roles;", len(limits), "limits;", len(screens), "screens;",
       sum(s["scope"] == "MVP" for s in screens), "MVP")

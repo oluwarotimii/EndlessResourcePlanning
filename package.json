@@ -14,7 +14,7 @@
     "check:docs": "node scripts/check-docs.mjs",
     "docs:status": "node scripts/check-docs.mjs --write",
     "check": "pnpm check:tokens && pnpm check:docs && pnpm typecheck && pnpm test && pnpm build",
-    "e2e": "node e2e/till-offline.cjs",
+    "e2e": "node e2e/till-offline.cjs && node e2e/returns.cjs && node e2e/stock.cjs && node e2e/count.cjs && node e2e/delivery.cjs",
     "fixtures": "python3 tools/gen-fixtures.py"
   },
   "devDependencies": {

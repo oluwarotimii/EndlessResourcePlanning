@@ -1,6 +1,6 @@
 // App-shell cache so the till opens offline. API calls are never cached here:
 // data offline lives in IndexedDB (catalogue, parked sales, queue).
-const CACHE = "erp-shell-v2";
+const CACHE = "erp-shell-v3";
 
 async function precache() {
   const urls = new Set(["/", "/manifest.webmanifest", "/icon.svg"]);
@@ -28,5 +28,7 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(fetch(req).then((r) => { const copy = r.clone(); caches.open(CACHE).then((c) => c.put("/", copy)); return r; }).catch(() => caches.match("/")));
     return;
   }
-  e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((r) => { if (r.ok) { const copy = r.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); } return r; })));
+  // ignoreVary: the browser sends an Origin header when it loads a lazy screen, and the server marks files "Vary: Origin",
+  // so without this a file cached at install would never match and a screen not yet opened online would fail offline.
+  e.respondWith(caches.match(req, { ignoreVary: true }).then((hit) => hit || fetch(req).then((r) => { if (r.ok) { const copy = r.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); } return r; })));
 });

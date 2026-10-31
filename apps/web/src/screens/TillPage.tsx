@@ -86,6 +86,8 @@ export function TillPage() {
   const block = saleBlock(sync.queue, tenant.offline);
   const results = useMemo(() => search(products, term).slice(0, 24), [products, term]);
 
+  /** Variant items must be scanned (a setting), so a tap cannot sell the wrong colour or size. */
+  const mustScan = (p: Product) => tenant.till.scanRequiredForVariants && !!p.family;
   const add = useCallback((p: Product) => {
     setNotice(null); setDone(null);
     setCart((c) => addProduct(c, p));
@@ -97,7 +99,7 @@ export function TillPage() {
   const onEnter = () => {
     const exact = findExact(products, term);
     if (exact) return add(exact);
-    if (results.length === 1 && term.trim()) return add(results[0]!);
+    if (results.length === 1 && term.trim() && !mustScan(results[0]!)) return add(results[0]!);
     if (term.trim()) setNotice(t("till.notFound", { code: term.trim() }));
   };
 
@@ -229,9 +231,14 @@ export function TillPage() {
         <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
           {results.map((p) => (
             <li key={p.id}>
-              <button onClick={() => add(p)} className="btn-spring glass-card glass-card-lift flex min-h-till w-full flex-col items-start rounded-xl p-3 text-left">
+              <button
+                onClick={() => (mustScan(p) ? input.current?.focus() : add(p))} aria-disabled={mustScan(p)}
+                className={`btn-spring glass-card flex min-h-till w-full flex-col items-start rounded-xl p-3 text-left ${mustScan(p) ? "opacity-80" : "glass-card-lift"}`}
+              >
                 <span className="font-semibold leading-tight">{p.name}</span>
+                {p.variant && <span className="font-bold">{p.variant}</span>}
                 <span className="tabular font-bold text-primary-ink">{money(p.price)}</span>
+                {mustScan(p) && <span className="text-text-muted">{t("till.scanToAdd")}</span>}
               </button>
             </li>
           ))}

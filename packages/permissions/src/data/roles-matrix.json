@@ -67,7 +67,7 @@
    "Returns": "VCEA",
    "Delivery": "VCE",
    "Repairs": "V",
-   "Cash-up": "VCE",
+   "Cash-up": "ACEV",
    "Credit sales": "VCEA",
    "Expenses": "VCEA",
    "HR and staff": "VA",

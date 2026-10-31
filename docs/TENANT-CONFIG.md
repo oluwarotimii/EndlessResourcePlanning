@@ -29,6 +29,20 @@ One validated file per company: `packages/tenant-config/tenant.json` (schema in 
 | `tax.vatNumber` | text | VAT or tax number printed on documents. |
 | `till.paymentMethods` | any of `cash`, `transfer`, `card`, `credit`, `other` | Payment buttons at the till, in this order. Remove a method to switch it off. `credit` means pay later and needs a customer with credit terms. |
 | `till.allowSplitPayments` | true or false | Allow one sale to be paid with several methods, including part credit. |
+| `cashUp.denominations` | list of whole numbers | Note values counted at closing balance, largest first. |
+| `cashUp.varianceReasons` | list of text | Reasons a cashier can pick when the count does not match. **Placeholders until the business supplies its real reason codes.** |
+| `returns.reasons` | list of text | Reasons a cashier can pick when goods are returned. **Placeholders until the business supplies its real reasons.** |
+| `returns.rules.defaultDays` | whole number | Days after a sale that a change-of-mind return is accepted, for any product without its own rule. **Placeholder (7).** |
+| `returns.rules.faultyDays` | whole number | Days a faulty item may be returned. **Placeholder (30).** |
+| `returns.rules.faultyReasons` | list of text | Which of the return reasons count as faulty (they use the faulty days). Must match the wording in `returns.reasons`. |
+| `returns.rules.byCategory` | map: category to `{days, faultyDays}` | Own days for a whole category (for example Audio: 3). Either number may be left out. The most specific rule wins: product, then category, then default. |
+| `returns.rules.byProduct` | map: product id to `{days, faultyDays}` | Own days for one product. |
+| `delivery.failedReasons` | list of text | Reasons a rider can pick when a delivery fails. **Placeholders until the business supplies its real reasons.** |
+| `delivery.codRemitHours` | whole number | Cash a rider collected on delivery must be handed in within this many hours; later it shows as overdue (L05). **A placeholder until the owner decides.** |
+| `stock.inTransitAlertHours` | whole number | A transfer that has been on the road longer than this many hours appears in the in-transit report (G02). |
+| `stock.shortageRulingHours` | whole number | A shortage still waiting for a ruling after this many hours is marked overdue in the approvals inbox. **A placeholder until the owner decides the real time limit.** |
+| `stock.recountByDifferentPerson` | true or false | When a stock count finds differences, the items that differ must be counted again by a **different person** than the first counter. |
+| `till.scanRequiredForVariants` | true or false | Items that come in variants (colour, size, power) must be added by **scanning the barcode**, not by tapping a tile, so the wrong variant is not sold by mistake. |
 | `offline.maxOfflineSalesPerTill` | whole number | Most unsynced sales a till may hold before it blocks new sales. |
 | `offline.syncWindowHours` | whole number | How long a sale may wait to sync before the till blocks new sales. |
 | `security.idleLockMinutes` | whole number | Minutes without touch before a till signs out. |

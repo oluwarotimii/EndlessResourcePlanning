@@ -46,10 +46,37 @@ else {
 }
 
 // ---- 2. tenant.json settings are documented
-const flat = (o, prefix = "") => Object.entries(o).flatMap(([k, v]) => (v && typeof v === "object" && !Array.isArray(v) ? flat(v, `${prefix}${k}.`) : [`${prefix}${k}`]));
+// Maps keyed by category or product name are one setting each (their keys are data, not settings).
+const MAPS = new Set(["byCategory", "byProduct"]);
+const flat = (o, prefix = "") => Object.entries(o).flatMap(([k, v]) => (v && typeof v === "object" && !Array.isArray(v) && !MAPS.has(k) ? flat(v, `${prefix}${k}.`) : [`${prefix}${k}`]));
 const doc = read("docs/TENANT-CONFIG.md");
 for (const key of flat(JSON.parse(read("packages/tenant-config/tenant.json")))) {
   if (!doc.includes(`\`${key}\``)) problems.push(`docs/TENANT-CONFIG.md does not document tenant.json setting \`${key}\``);
+}
+
+// ---- 3. every kind of approval is described in docs/APPROVAL-ROUTING.md
+const kindsMatch = read("packages/api-contract/src/index.ts").match(/ApprovalKind = z\.enum\(\[([^\]]*)\]\)/);
+const routingDoc = read("docs/APPROVAL-ROUTING.md");
+for (const kind of (kindsMatch?.[1] ?? "").match(/"([a-z_]+)"/g)?.map((k) => k.replaceAll('"', "")) ?? []) {
+  if (!routingDoc.includes(`\`${kind}\``)) problems.push(`docs/APPROVAL-ROUTING.md does not describe the approval kind \`${kind}\``);
+}
+
+// ---- 4. every approval kind and queued action is mapped to ERPNext (docs/ERPNEXT-MAPPING.md)
+const mapping = read("docs/ERPNEXT-MAPPING.md");
+const queueMatch = read("packages/offline/src/types.ts").match(/QueueItemType\s*=\s*([^;]+);/);
+const queued = (queueMatch?.[1] ?? "").match(/"([a-z.]+)"/g)?.map((k) => k.replaceAll('"', "")) ?? [];
+const approvalKinds = (kindsMatch?.[1] ?? "").match(/"([a-z_]+)"/g)?.map((k) => k.replaceAll('"', "")) ?? [];
+for (const name of [...queued, ...approvalKinds]) {
+  if (!mapping.includes(`\`${name}\``)) problems.push(`docs/ERPNEXT-MAPPING.md does not map \`${name}\` to ERPNext`);
+}
+
+// ---- 5. every API path the mock exposes is in the Frappe app spec (docs/FRAPPE-APP-SPEC.md)
+const serverSrc = read("apps/mock-server/src/server.ts");
+const staticPaths = [...serverSrc.matchAll(/pathname === "(\/api\/[^"]+)"/g)].map((m) => m[1]);
+const dynamicPaths = [...serverSrc.matchAll(/match\(\/\^(\\\/api[^$]*)\$\/\)/g)].map((m) => m[1].replaceAll("\\/", "/").replace("([^/]+)", ":id"));
+const spec = read("docs/FRAPPE-APP-SPEC.md");
+for (const path of [...staticPaths, ...dynamicPaths]) {
+  if (!spec.includes(`\`${path}\``)) problems.push(`docs/FRAPPE-APP-SPEC.md does not list the API path \`${path}\``);
 }
 
 if (problems.length) { console.error("Documentation is out of sync:\n- " + problems.join("\n- ")); process.exit(1); }

@@ -7,7 +7,7 @@ Last updated: 2026-10-31 (after the first Sprint 3 increment: the approvals engi
 ---
 
 ## 1. What this project is, in five lines
-- A **role-based front end on ERPNext** for a Nigerian retail company moving off the Busy accounting software. Staff see only the screens their job needs (till, stock, cash-up, approvals, delivery), not ERPNext's full interface.
+- A **role-based front end on ERPNext** for a Nigerian retail company moving off the Busy accounting software. Staff see only the screens their job needs (till, stock, closing balance, approvals, delivery), not ERPNext's full interface.
 - It is built **front end first against a mock API**; the ERPNext adapter comes in Sprint 5. Nothing talks to a real ERPNext yet.
 - 20 roles, 24 business areas, 93 screens, of which 29 are the **MVP for one pilot branch and 6 roles**: Cashier, Branch manager, Warehouse officer, Stock controller, Rider, Delivery coordinator.
 - Built in two-week sprints (S1 2 Nov to S4 25 Dec 2026 plus a buffer). **S1 and S2 are done; S3 is next.**
@@ -23,6 +23,11 @@ docs/PRODUCT-CHANGELOG.md      every product change, newest first
 docs/DECISIONS.md              decisions, open questions, problems in the source documents
 docs/SCREEN-STATUS.md          GENERATED table of all 93 screens and their status
 docs/TENANT-CONFIG.md          every tenant.json setting explained
+docs/APPROVAL-ROUTING.md       who approves what, and how to change it
+docs/FRAPPE-APP-SPEC.md        the build list for the custom Frappe app (doctypes, workflows, a method per API path)
+docs/SCENARIOS.md              the open questions as stories with numbers, for the owner
+docs/ERPNEXT-MAPPING.md        how each concept lives in ERPNext (Owner / Seen / Proposal) and the questions for staging
+docs/GLOSSARY.md               plain-word meanings (cash-up, float, variance...)
 docs/DESIGN-SYSTEM.md          how the AURA design system is applied and where we deviate
 docs/PRINTING.md               A5 printing and silent printing
 docs/source/                   the owner's originals: requirements, frontend plan, two spreadsheets, design demonstrator
@@ -54,6 +59,8 @@ If `pnpm check` is not green on arrival, stop and fix that first; do not build o
 
 **One contract.** `packages/api-contract` is our own domain contract (Sale, Shift, Customer, Capabilities, Task...). Screens use the `ApiClient` interface (`apps/web/src/api/client.ts`). The mock implements it today; the ERPNext adapter must implement the same interface. Pure shared rules live here too: `computeTotals` (VAT), `cashOf`, `creditOf`. The server (mock now, ERPNext later) is the authority and recomputes totals.
 
+**Who approves what is a setting** (`packages/permissions/src/data/approval-routing.json`, see `docs/APPROVAL-ROUTING.md`): ordered steps of roles per kind of approval; a kind with no entry falls back to the matrix Approve letter. Never hard-code an approver role in code.
+
 **Permissions.** `capabilities` returned at sign-in = roles + area permission letters (V view, C create, E edit, A approve) + scope. Navigation is the screen registry filtered by those capabilities (`packages/permissions`). **Hidden, never greyed out.** Direct URLs to forbidden screens show a refusal. The UI only hides; the server must enforce.
 
 **Approvals (Sprint 3, first increment).** `GET /api/approvals` lists requests the user may decide (or raised). `POST /api/approvals/:id/decision` is the only way to decide one. Every decision carries an idempotency key; a rejection needs a reason; the creator is refused; the approver needs the `A` letter on the area mapped in `packages/permissions` (`approvalArea`); approvals are online-only. The inbox (`apps/web/src/screens/ApprovalsPage.tsx`) shows who/what/amount/limit/customer, hides the controls when the role is not allowed, and uses `HoldToConfirm` so a short tap cannot approve. Requests are seeded in the mock until S05 and CR01 raise them.
@@ -76,8 +83,10 @@ If `pnpm check` is not green on arrival, stop and fix that first; do not build o
 5. **Every money, stock or approval write carries an idempotency key** and is safe to retry. Approvals and payouts are **blocked offline**.
 6. **The creator of a record never approves it.** Cost prices are hidden from most roles. Data is scoped by branch/warehouse.
 7. **Roles, approval limits and the screen list come from the spreadsheets** (`pnpm fixtures`), never a second hand-kept copy.
-8. **Handwritten core screens** (till, receiving, cash-up, delivery proof). No generic form engine until a pattern repeats three times.
+8. **Handwritten core screens** (till, receiving, closing balance, delivery proof). No generic form engine until a pattern repeats three times.
 9. **Documentation is part of the change** (section 8).
+11. **ERPNext is the back end.** Every build adds or updates a row in `docs/ERPNEXT-MAPPING.md` (Owner, Seen or Proposal; never present a Proposal as fact). `pnpm check:docs` fails if an approval kind or queued action is unmapped.
+10. **Plain words.** Opening balance, closing balance, approve, difference (see `docs/GLOSSARY.md`). Internal names stay in code.
 
 ## 6. How the previous model worked (follow this process)
 **The full step-by-step playbook, with the actual commands, the real-browser test procedure and a table of mistakes made, is in `docs/PROCESS-PLAYBOOK.md`. Read it after this section.** The summary:
@@ -114,12 +123,14 @@ If `pnpm check` is not green on arrival, stop and fix that first; do not build o
 - **Global Playwright:** run with `NODE_PATH=$(npm root -g) node e2e/till-offline.cjs`; do not install another Playwright version (it will not find the browser).
 - **The mock server is in memory** and accumulates sales across runs; compare before and after counts in tests, do not assert absolute totals.
 - **Some harnesses require reading a file before overwriting it**; read first.
+- **Offline cache and `Vary: Origin`.** A file cached at install did not match the browser's module request (it sends `Origin`, the server sends `Vary: Origin`), so a screen not yet opened online failed offline. The service worker matches with `ignoreVary`. Always test offline on a screen the device has **never opened online** (`e2e/delivery.cjs` does).
 - **Hold-to-confirm** holds for 700 ms. Its tests use real timers (an 800 ms `act`) because fake timers fight `waitFor`; also assert that a short pointer-down/up does not approve.
 
 ## 8. Documentation rule (you must do this with every product change)
 A change to behaviour, a setting, a rule or a decision is not done until these are updated **in the same change**:
 - [ ] `docs/PRODUCT-CHANGELOG.md`: new entry at the top (what changed, documents updated, what is open)
 - [ ] `docs/DECISIONS.md`: edit the decision or open question
+- [ ] `docs/ERPNEXT-MAPPING.md`: a row for anything new (enforced for approval kinds and queued actions)
 - [ ] `docs/TENANT-CONFIG.md`: a row for every new `tenant.json` setting (enforced by `pnpm check:docs`)
 - [ ] `docs/SCREEN-STATUS.md`: run `pnpm docs:status` (enforced by `pnpm check:docs`); add a note in `docs/screen-status-notes.json` for a partly built screen
 - [ ] `README.md` and `docs/PRINTING.md` if what they describe changed
@@ -131,24 +142,29 @@ A change to behaviour, a setting, a rule or a decision is not done until these a
 **Done**
 - **Sprint 1:** foundation, tokens, tenant config, login with PIN, permission-driven navigation, offline bar, role home, CI.
 - **Sprint 2:** offline queue, till, parked sales, shift open/close, customer lookup, sync tray, A5 printing, service worker, real-browser test.
-- **Sprint 2.1:** configurable VAT mode, configurable payment methods including credit and other, split and part-credit payments, credit limit checks, cash-up on cash payments only, customer cache for offline credit sales.
+- **Sprint 2.1:** configurable VAT mode, configurable payment methods including credit and other, split and part-credit payments, credit limit checks, closing balance on cash payments only, customer cache for offline credit sales.
 - **Sprint 3, first increment:** approvals contract, permission mapping, mock endpoints, seeded requests, and the A01 inbox (hold-to-confirm, rejection reason, creator rule, offline block).
 - **Sprint 3, second increment:** S05 needs-manager request in the till (discount or void, optional reason, blocked offline), approved discount applied once before VAT, approved void clears the cart, approver limit enforced. The over-limit credit request (CR01) is next.
-Status of every screen: `docs/SCREEN-STATUS.md` (currently 7 of the 29 MVP screens built, 3 partly built).
+- **Sprint 3, third increment:** Q01 blind closing balance count (closing a shift), Q02 closing balance approval, A02 manager home, G01 closing balance differences report. The closing balance approver is a default to confirm (`docs/DECISIONS.md`, decision 14).
+- **Sprint 3, fourth and fifth increments:** approver routing as a setting, customer returns (T01) with refunds routed through the approval setting, and the branch stock request (H02). **Sprint 3 is complete.**
+- **Sprint 4, first increment:** stock transfers (H03 pack and send, H04 receive, both offline), stock lookup (H05), and the in-transit report (G02). Two people at every hand-over, shortages flagged.
+- **Sprint 4, second increment:** the shortage ruling (a shortage opens a ruling for someone independent; the ruler chooses who bears the loss; cost value hidden from the branch), the inbox following the approval setting, and the ERPNext mapping document with its guard.
+- **Sprint 4, third increment:** blind stock count with recount by a different person (K01, offline) and count differences with a write-off request that adjusts stock only after approval (K02).
+- **Sprint 4, fourth increment (Sprint 4 is complete):** delivery (dispatch board, rider deliveries, proof in 3 taps offline, hand in delivery cash, delivery cash outstanding), variant safeguards (scan required; mix-up hint), the offline `Vary` fix, the Frappe app spec and the scenarios document.
+Status of every screen: `docs/SCREEN-STATUS.md` (see the generated file for the current count).
 
-**Now: rest of Sprint 3, "Cash and approvals"** (30 Nov to 11 Dec per the plan; do it next regardless of dates)
-Screens from `Screen-Inventory.xlsx`: T01 customer return (receipt lookup, wizard), S05 needs-manager request (discount or void, a dialog, not a PIN), ~~A01 approvals inbox~~ (done), **A02 branch manager home**, Q01 cash-up count (wizard), Q02 cash-up sign-off (approval), G01 loss report (cash-up variance by branch and cashier), H02 branch stock request, and the **manager-approval half of CR01** (over-credit-limit).
-Suggested order and notes:
-1. **CR01 next.** S05 is done (discount/void request from the till). Now the cashier raises an over-limit credit request from the till; it lands in A01 and the cashier sees the result. The sale may go over the limit only with an approved request. Then returns (receipt lookup from local and server sales), then cash-up count and sign-off, then manager home and the variance report.
-2. Returns (needs receipt lookup from local and server sales), then cash-up count and sign-off, then manager home and the variance report.
-3. **Fix the cash-up approval mismatch** (`docs/DECISIONS.md`, problem 1) with the user before building sign-off, because the matrix and the journey disagree about who may approve.
-4. Ask the user for the **cash-up variance and return reason codes** (requirements, open question 6); do not invent them.
-Acceptance targets from the requirements: approval by a manager in 2 taps; cash-up sign-off about 1 minute; each screen under about 150 KB (the till chunk is about 5.4 KB gzipped plus about 117 KB shared).
+**Now: Sprint 5, the ERPNext adapter**
+The front end is complete for the pilot's 29 MVP screens except the placeholders listed in `docs/SCREEN-STATUS.md`. Next is replacing the mock with ERPNext.
+1. Read `docs/FRAPPE-APP-SPEC.md` (the build list) and `docs/ERPNEXT-MAPPING.md` (the open questions). **Answer the staging questions first**: the pinned ERPNext version, a staging site with the demo data, the partial-receipt behaviour, whether workflows can enforce dual control, how several payment modes and idempotency keys are stored.
+2. Build the read side first, then writes with idempotency, then the approvals as Workflows, then stock, then delivery (the order in section 14 of the spec). The same contract tests must pass against the mock and ERPNext.
+3. Ask the user to answer the stories in `docs/SCENARIOS.md` that block each step; until then the placeholders stand.
+4. Still open product work: the mix-up correction flow (Scenario 13), the remaining MVP placeholders, and the Later screens.
+Acceptance targets from the requirements: approval by a manager in 2 taps; closing balance approval about 1 minute; each screen under about 150 KB (the till chunk is about 5.4 KB gzipped plus about 117 KB shared).
 
 **Later sprints** (see `Frontend-Plan.md` section 7): S4 stock and delivery; S5 the ERPNext adapter (needs a pinned ERPNext version, a staging site, a read-only capabilities method, safe-to-retry write endpoints, and a PIN sign-in method); S6 to S10 as planned. Camera barcode scanning, real payment confirmation (Paystack) and per-item VAT exemption are not built.
 
 ## 10. What you must not do
-- Do not commit, push or open pull requests unless the user asks. Deliver a zip.
+- Do not commit, push or open pull requests unless the user asks. **Do not produce a zip or a patch unless the user asks for one**; say where the changes are in the working copy.
 - Do not invent ERPNext facts (doctype fields, endpoints, versions). Ask, or write the question into `docs/DECISIONS.md`.
 - Do not invent business values (limits, VAT, reason codes, printers). Use placeholders clearly marked as such and list them as open questions.
 - Do not change the owner's original text in `docs/source/`; append amendments.
