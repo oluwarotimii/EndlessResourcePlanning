@@ -1,4 +1,4 @@
-# Role-based retail front end (Sprints 1-2.1, Sprint 3 in progress)
+# Role-based retail front end (Sprints 1-4 complete; Sprint 5, the ERPNext adapter, is next)
 
 React + Vite + TypeScript PWA on a mock API, built to switch to ERPNext later. See `docs/source/` for the requirements, plan and spreadsheets, and `docs/DESIGN-SYSTEM.md` for how the AURA design system is applied.
 
@@ -51,7 +51,7 @@ Demo PINs: Cashier **1111**, Branch manager **2222**, Warehouse officer **3333**
 - **Approvals inbox (A01):** who raised the request, what it is, the amount, the limit, the customer and the note. Approve by holding until the bar fills; reject through a dialog that requires a reason. Decided requests show who decided and why.
 - **Rules enforced twice:** the UI hides the controls when the role may not decide, the request is the user's own, or the device is offline; the mock server checks the same rules and that a decision is still pending. Decisions are idempotent.
 - **S05 (needs-manager request) is built inside the till:** "Ask a manager" raises a discount or void request with an optional reason. Nothing changes until approval; an approved discount applies to the gross subtotal before VAT, and an approved void clears the cart. Requests are blocked offline.
-- The over-limit credit request (`CR01`) is the next increment; the mock seeds a few requests for the demo.
+- **CR01 (over-limit credit request)** is built the same way: when a credit sale would go over the customer's available credit, "Ask a manager" raises a `credit_over_limit` request; once approved it is tied to that customer and amount and can be used for one sale only.
 
 ## What Sprint 3 adds so far (cash and approvals)
 
@@ -102,4 +102,4 @@ node e2e/till-offline.cjs                   # sell online, go offline, reload, s
 
 ## Not built yet (by design)
 
-Returns, needs-manager request, raising an over-limit credit request from the till, closing balance and approval, the manager home and the variance report (rest of S3); stock and delivery (S4). Camera barcode scanning (keyboard scanners are the default per the plan), real payment confirmation (Paystack, Sprint 9), the ERPNext adapter (S5). Every other registry screen opens a placeholder.
+Camera barcode scanning (keyboard scanners are the default per the plan), real payment confirmation (Paystack, Sprint 9), the ERPNext adapter (S5), per-account credit approvers and credit partners (decisions 42, 43), the mix-up correction flow (Scenario 13), and the remaining Later screens. Every other registry screen opens a placeholder; see `docs/SCREEN-STATUS.md` for the current count.

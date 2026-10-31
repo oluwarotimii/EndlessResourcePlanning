@@ -31,4 +31,5 @@ export const BUILT: Record<string, LazyExoticComponent<ComponentType>> = {
 /** Screens built as a dialog inside another screen, so they have no route of their own. */
 export const BUILT_DIALOGS: Record<string, true> = {
   S05: true,
+  CR01: true,
 };

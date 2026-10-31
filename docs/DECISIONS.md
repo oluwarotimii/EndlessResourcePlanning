@@ -49,10 +49,11 @@ Current state only. When a decision changes, edit it here and add a line to `doc
 42. **Credit partners bill a third party (not built).** Some credit sales are billed to a credit partner (for example Credit Direct) rather than to the customer. The sale carries a "bill to" party. Some items may be billed to any party, others only to certain ones. Scenario 17.
 43. **A Credit control officer approves credit sales, depending on the account (not built).** Approval routing for credit becomes per account (customer or credit partner): each account names its approver and limit. Anybody holding the permission may approve. Scenario 17.
 44. **Permissions are assigned, not hard-coded.** Approvers, inspectors and rulers are assigned to roles or to named people in the configuration console (planned Sprint 10). Until then the routing file holds the placeholders (`docs/APPROVAL-ROUTING.md`).
+45. **CR01: the over-limit credit request is raised from the till.** When a credit sale would go over the customer's available credit, the cashier can ask a manager from the same needs-manager dialog used for discounts and voids (S05). The request carries the customer and the amount over the limit; once approved, the approval is tied to that customer and amount and can be used for one sale only (a second attempt, or a different customer, is refused). The sale carries the approval's id so the server can check it. Per-account approvers and credit partners billed to a third party are not built (decisions 42, 43).
 
 ## Open questions for the business
 - **VAT:** which `tax.mode`, what rate, and who confirms it (accountant)? Are some items VAT-exempt (not supported yet; the mode applies to the whole sale)?
-- **Credit:** real credit limits per customer and who sets them; whether the cashier or the manager may sell on credit; whether credit needs a deposit. The approvals inbox can now receive an over-limit request; raising it from the till (CR01) is the next Sprint 3 increment.
+- **Credit:** real credit limits per customer and who sets them; whether the cashier or the manager may sell on credit; whether credit needs a deposit. The over-limit request from the till (CR01, decision 45) is built; per-account approvers and credit partners (decisions 42, 43) are not.
 - **Offline prices:** a sale made offline uses the price the till last saw. If the real price changed meanwhile, accept or send to a manager? The mock accepts the till's price.
 - **Offline sign-in:** signing in needs a connection (the PIN is checked by the server). A cashier already signed in keeps working offline, including after a reload. Do tills need to sign in offline (for example after a power cut)? That needs a locally stored PIN check and a security decision.
 - Closing balance variance **reason codes** (requirements, open question 6): the cashier now picks a reason when the count does not match, but the list in `cashUp.varianceReasons` is a **placeholder** (counting error, change given wrongly, cash taken for an expense, unknown). Return reason codes are still undecided.
@@ -76,7 +77,7 @@ Current state only. When a decision changes, edit it here and add a line to `doc
 3. **Screen counts.** The Screens sheet has 97 rows but the Summary says 93. The build uses the 93 actual screens.
 
 ## Known gaps
-- The approvals inbox and the S05 discount/void request from the till are built. The returns screen does not raise requests yet, and the manager-approval half of CR01 (over-limit credit from the till) is next.
+- The approvals inbox, the S05 discount/void request and the CR01 over-limit credit request are all built from the till. The returns screen raises its own refund approval (T01) but no other screen outside the till raises a request yet.
 - Camera barcode scanning is not built; keyboard-wedge scanners work.
 - Silent printing is documented but not verified on real hardware.
 - The e2e test is a script, not yet in CI (CI has no browser installed).

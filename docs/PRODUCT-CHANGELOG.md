@@ -2,6 +2,12 @@
 
 Every change that alters what the product does, for users or for the business, gets an entry here **in the same change**, newest first. Each entry says what changed, which documents were updated, and what is still open. The rule is in `CLAUDE.md`; `docs/HANDOVER.md` has the checklist.
 
+## 2026-11-03, CR01: the over-limit credit request from the till (decision 45)
+
+**What changed:** when a credit sale would take a customer over their available credit, the cashier can now ask a manager from the same needs-manager dialog used for discounts and voids (S05), with an optional note. The server raises a `credit_over_limit` approval carrying the customer and the amount over the limit. Once approved, the till shows "Credit over the limit approved for &lt;name&gt;" and the Credit button is enabled; the sale carries the approval's id. The server checks the approval belongs to the same cashier and customer, covers the amount, and has not already been used on another sale; changing the customer, the cart or the amount needed clears the approval and a fresh request is needed. This completes the credit-sale approval path that CR01 and A01 started in Sprint 3.
+**Documents updated:** `docs/DECISIONS.md` (decision 45, the credit open question, the known-gaps line), `docs/ERPNEXT-MAPPING.md` (`credit_over_limit` row), `docs/SCREEN-STATUS.md` and `docs/screen-status-notes.json` (CR01 now built, folded into the till like S05), `README.md`, this entry.
+**Open:** per-account approvers (a Credit control officer) and credit partners billed to a third party are still not built (decisions 42, 43). Real credit limits and who sets them are still open questions.
+
 ## 2026-11-02, Return window by product, category and fault (decision 40)
 
 **What changed:** a refund request is refused if the sale is older than the allowed days. Days come from `returns.rules`: product rule, then category rule, then the company default; faulty reasons (`returns.rules.faultyReasons`) use the faulty days. Placeholders: 7 days, 30 faulty, Audio 3. The cashier sees the server's message ("... can only be returned within 3 days. This sale is 4 days old.").
