@@ -48,9 +48,12 @@ function fakeServer() {
     approvals: async () => ({ approvals: approvals.map((a) => ({ ...a })) }),
     createApproval: async (_t, input) => {
       if (s.down) throw new ApiFailure("unavailable", "unavailable");
+      const names: Record<string, string> = { c1: "Ade Stores", c2: "Bola Ventures", c3: "Chioma Okeke" };
       const approval: Approval = {
         id: `AP-${String(approvals.length + 1).padStart(4, "0")}`, kind: input.kind, status: "pending",
-        amount: input.amount, limit: 3, unit: input.unit, requestedBy: CASHIER.user, requestedAt: "now", requestNote: input.requestNote,
+        amount: input.amount, limit: input.kind === "credit_over_limit" ? (input.customerId === "c2" ? 100000 : 200000) : 3,
+        unit: input.unit, requestedBy: CASHIER.user, requestedAt: "now", requestNote: input.requestNote,
+        customerId: input.customerId, customerName: input.customerId ? names[input.customerId] : undefined,
       };
       approvals.push(approval);
       return { approval: { ...approval }, duplicate: false };
@@ -353,6 +356,28 @@ describe("payment methods, credit and split payments", () => {
     expect(await screen.findByText("The sale was voided. The cart is empty.")).toBeInTheDocument();
     expect(screen.getByTestId("total")).toHaveTextContent(/₦0/);
     expect(s.sales.size).toBe(0);
+  });
+
+  it("a credit sale over the limit needs a manager approval before it can be paid", async () => {
+    const { s } = await ready();
+    await attach("Bola Ventures"); // limit 100,000, owes 98,000: 2,000 left, sale is 13,000
+    expect(screen.getByRole("button", { name: "Credit" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Ask a manager" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Ask to sell on credit over the limit" }));
+    expect(screen.getByText(/over their available credit by ₦11,000/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Send to manager" }));
+    expect(await screen.findByRole("heading", { name: "Waiting for a manager" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Credit" })).toBeDisabled(); // nothing changes before approval
+
+    s.approvals[0]!.status = "approved";
+    fireEvent.click(screen.getByRole("button", { name: "Check again" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(await screen.findByText("Credit over the limit approved for Bola Ventures.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Credit" })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Credit" }));
+    await waitFor(() => expect(s.sales.size).toBe(1));
+    expect([...s.sales.values()][0]).toMatchObject({ customerId: "c2", creditApprovalId: "AP-0001", payments: [{ method: "credit", amount: 13000 }] });
   });
 
   it("the receipt shows each payment and the balance on credit", async () => {

@@ -62,7 +62,7 @@ export const APPROVALS: Approval[] = [
   {
     id: "AP-0003", kind: "credit_over_limit", status: "pending", amount: 13000, limit: 100000, unit: "naira",
     requestedBy: { id: "u-cashier", name: "Amaka Obi" }, requestedAt: "2026-10-31T10:05:00.000Z",
-    customerName: "Bola Ventures", requestNote: "Regular customer; promises to pay on Friday.",
+    customerId: "c2", customerName: "Bola Ventures", requestNote: "Regular customer; promises to pay on Friday.",
   },
   {
     id: "AP-0004", kind: "discount", status: "pending", amount: 5, limit: 3, unit: "percent",

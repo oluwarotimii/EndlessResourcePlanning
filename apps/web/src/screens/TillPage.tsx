@@ -107,7 +107,11 @@ export function TillPage() {
     if (!cart.customer) return t("till.credit.needCustomer");
     const available = availableCredit(cart.customer);
     if (available === undefined) return t("till.credit.noTerms", { name: cart.customer.name });
-    if (amount > available) return t("till.credit.over", { name: cart.customer.name, available: money(available) });
+    if (amount > available) {
+      const approved = cart.creditApproval?.customerId === cart.customer.id && amount <= cart.creditApproval.amount;
+      if (approved) return null;
+      return t("till.credit.over", { name: cart.customer.name, available: money(available) });
+    }
     return null;
   }
 
@@ -124,7 +128,8 @@ export function TillPage() {
       const payload: SaleInput = {
         idempotencyKey: key, clientCreatedAt: now, shiftId: shift.id, customerId: cart.customer?.id,
         lines: cart.lines, subtotal: grossSubtotal, vatMode: tenant.tax.mode, vat: totals.vat, total,
-        discountApprovalId: cart.discount?.approvalId, payments,
+        discountApprovalId: cart.discount?.approvalId,
+        creditApprovalId: credit > 0 ? cart.creditApproval?.approvalId : undefined, payments,
       };
       await kv.set(cartKey, { ...cart, chargeKey: key });
       const local: LocalSale = {
@@ -144,6 +149,12 @@ export function TillPage() {
   function applyDiscount(percent: number, approvalId: string) {
     setCart((c) => ({ ...c, discount: { approvalId, percent }, chargeKey: undefined }));
     setNotice(t("till.discountApproved", { rate: percent }));
+  }
+
+  function applyCredit(approvalId: string) {
+    if (!cart.customer) return;
+    setCart((c) => ({ ...c, creditApproval: { approvalId, customerId: cart.customer!.id, amount: totals.total }, chargeKey: undefined }));
+    setNotice(t("till.credit.approved", { name: cart.customer.name }));
   }
 
   function applyVoid() {
@@ -191,6 +202,8 @@ export function TillPage() {
 
   const payDisabled = busy || cart.lines.length === 0 || !!block;
   const wholeCreditProblem = cart.lines.length > 0 && methods.includes("credit") ? creditProblem(totals.total) : null;
+  const creditAvailable = cart.customer ? availableCredit(cart.customer) : undefined;
+  const creditOver = creditAvailable === undefined ? 0 : Math.max(0, totals.total - creditAvailable);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_26rem]">
@@ -274,6 +287,9 @@ export function TillPage() {
                 ))}
               </div>
               {wholeCreditProblem && <p className="mt-2 text-text-muted" data-testid="credit-hint">{wholeCreditProblem}</p>}
+              {wholeCreditProblem && creditOver > 0 && !cart.creditApproval && !offline && (
+                <p className="mt-1 text-text-muted">{t("till.credit.askManager")}</p>
+              )}
               <label className="mt-3 block">
                 <span className="text-text-muted">{t("till.received")}</span>
                 <input inputMode="numeric" value={received} onChange={(e) => setReceived(digits(e.target.value))} className="tabular mt-1 min-h-touch w-full rounded-xl border border-border-strong bg-surface-raised px-3 text-lg" />
@@ -337,10 +353,10 @@ export function TillPage() {
               </label>
               {custStale && <p className="text-text-muted">{t("till.customerStale")}</p>}
               <ul>
-                <li><button className="btn-spring min-h-touch w-full rounded-lg px-2 text-left hover:bg-fill" onClick={() => { setCart((c) => ({ ...c, customer: undefined, chargeKey: undefined })); setCustOpen(false); }}>{t("till.walkIn")}</button></li>
+                <li><button className="btn-spring min-h-touch w-full rounded-lg px-2 text-left hover:bg-fill" onClick={() => { setCart((c) => ({ ...c, customer: undefined, creditApproval: undefined, chargeKey: undefined })); setCustOpen(false); }}>{t("till.walkIn")}</button></li>
                 {custResults.map((c) => (
                   <li key={c.id}>
-                    <button className="btn-spring min-h-touch w-full rounded-lg px-2 text-left hover:bg-fill" onClick={() => { setCart((c0) => ({ ...c0, chargeKey: undefined, customer: { id: c.id, name: c.name, creditLimit: c.creditLimit, balance: c.balance } })); setCustOpen(false); }}>
+                    <button className="btn-spring min-h-touch w-full rounded-lg px-2 text-left hover:bg-fill" onClick={() => { setCart((c0) => ({ ...c0, chargeKey: undefined, creditApproval: undefined, customer: { id: c.id, name: c.name, creditLimit: c.creditLimit, balance: c.balance } })); setCustOpen(false); }}>
                       {c.name} <span className="text-text-muted">{c.phone}</span>
                     </button>
                   </li>
@@ -384,9 +400,14 @@ export function TillPage() {
         open={managerOpen}
         total={totals.total}
         discounted={!!cart.discount}
+        customerId={cart.customer?.id}
+        customerName={cart.customer?.name}
+        creditOver={creditOver}
+        creditApproved={!!cart.creditApproval}
         onClose={() => setManagerOpen(false)}
         onDiscount={applyDiscount}
         onVoid={applyVoid}
+        onCredit={applyCredit}
       />
     </div>
   );

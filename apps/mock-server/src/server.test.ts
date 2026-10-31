@@ -136,6 +136,23 @@ describe("till endpoints (Sprint 2/3)", () => {
     expect((await post("/api/sales", sale(uuid()), h)).status).toBe(403);
   });
 
+  it("a credit sale over the limit needs an approved request for that customer, used once", async () => {
+    const cashier = await login("u-cashier", "1111");
+    const manager = await login("u-manager", "2222");
+    const raised = ApprovalResponse.parse(await (await post("/api/approvals", {
+      idempotencyKey: uuid(), kind: "credit_over_limit", amount: 13000, unit: "naira", customerId: "c2",
+    }, cashier)).json()).approval;
+    expect(raised).toMatchObject({ kind: "credit_over_limit", customerId: "c2", customerName: "Bola Ventures", limit: 100000 });
+    await post(`/api/approvals/${raised.id}/decision`, { idempotencyKey: uuid(), decision: "approve" }, manager);
+
+    const shiftId = await openShift(cashier);
+    const credit = { customerId: "c2", payments: [{ method: "credit", amount: 13000 }] };
+    expect((await post("/api/sales", sale(shiftId, credit), cashier)).status).toBe(400); // no approval
+    const approved = sale(shiftId, { ...credit, creditApprovalId: raised.id });
+    expect(SaleResponse.parse(await (await post("/api/sales", approved, cashier)).json()).sale).toMatchObject({ customerId: "c2", creditApprovalId: raised.id });
+    expect((await post("/api/sales", sale(shiftId, { ...credit, creditApprovalId: raised.id }), cashier)).status).toBe(400); // used
+  });
+
   it("an approved discount is applied once, and cannot be reused or used before approval", async () => {
     const cashier = await login("u-cashier", "1111");
     const manager = await login("u-manager", "2222");

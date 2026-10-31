@@ -9,7 +9,7 @@ import { useMoney } from "../../state/tenant";
 import { ApprovalStatusBadge } from "../../ui/ApprovalStatusBadge";
 import { Button } from "../../ui/Button";
 
-type Mode = "choose" | "discount" | "void";
+type Mode = "choose" | "discount" | "void" | "credit";
 
 const failureText = (e: unknown): string => {
   if (e instanceof ApiFailure && e.code === "unavailable") return t("till.manager.offline");
@@ -21,16 +21,23 @@ const failureText = (e: unknown): string => {
  * an approval comes back; the server, not this screen, decides who may approve and how much.
  */
 export function NeedsManagerDialog({
-  open, total, discounted, onClose, onDiscount, onVoid,
+  open, total, discounted, customerId, customerName, creditOver, creditApproved, onClose, onDiscount, onVoid, onCredit,
 }: {
   open: boolean;
   /** The sale total after any discount already applied. */
   total: number;
   /** A discount is already on the cart, so only a void can be requested now. */
   discounted: boolean;
+  /** The selected customer, when the credit over-limit option can be offered. */
+  customerId?: string;
+  customerName?: string;
+  /** How far this sale goes over the customer's available credit; zero when it does not. */
+  creditOver: number;
+  creditApproved: boolean;
   onClose(): void;
   onDiscount(percent: number, approvalId: string): void;
   onVoid(): void;
+  onCredit(approvalId: string): void;
 }) {
   const { api, token, caps } = useSession();
   const { state: connection } = useSync();
@@ -54,13 +61,14 @@ export function NeedsManagerDialog({
   const validPercent = Number.isInteger(value) && value >= 1 && value <= 100;
   const preview = mode === "discount" && validPercent ? discountAmount(total, value) : 0;
 
-  async function send(kind: "discount" | "void") {
+  async function send(kind: "discount" | "void" | "credit") {
     if (!token || offline || busy) return;
     const parsed = CreateApprovalInput.safeParse({
       idempotencyKey: crypto.randomUUID(),
-      kind,
+      kind: kind === "credit" ? "credit_over_limit" : kind,
       amount: kind === "discount" ? value : total,
       unit: kind === "discount" ? "percent" : "naira",
+      customerId: kind === "credit" ? customerId : undefined,
       requestNote: note.trim() || undefined,
     });
     if (!parsed.success) {
@@ -91,6 +99,7 @@ export function NeedsManagerDialog({
       setRequest(found);
       if (found.status === "approved") {
         if (found.kind === "discount") onDiscount(found.amount, found.id);
+        else if (found.kind === "credit_over_limit") onCredit(found.id);
         else onVoid();
         onClose();
       }
@@ -103,7 +112,10 @@ export function NeedsManagerDialog({
 
   const title = request
     ? t("till.manager.waiting")
-    : mode === "discount" ? t("till.manager.discountTitle") : mode === "void" ? t("till.manager.voidTitle") : t("till.manager.title");
+    : mode === "discount" ? t("till.manager.discountTitle")
+      : mode === "void" ? t("till.manager.voidTitle")
+        : mode === "credit" ? t("till.manager.creditTitle")
+          : t("till.manager.title");
 
   const noteField = (
     <>
@@ -160,6 +172,9 @@ export function NeedsManagerDialog({
                 <UserRoundCog className="h-5 w-5" aria-hidden="true" />{t("till.manager.discountOption")}
               </Button>
             )}
+            {creditOver > 0 && !creditApproved && (
+              <Button till variant="subtle" className="w-full" onClick={() => setMode("credit")}>{t("till.manager.creditOption")}</Button>
+            )}
             <Button till variant="subtle" className="w-full" onClick={() => setMode("void")}>{t("till.manager.voidOption")}</Button>
             <Button variant="ghost" className="w-full" onClick={onClose}>{t("till.manager.close")}</Button>
           </div>
@@ -179,6 +194,26 @@ export function NeedsManagerDialog({
               <p className="rounded-xl bg-warning-subtle p-3 text-warning-ink">{t("till.manager.offline")}</p>
             ) : (
               <Button till className="w-full" disabled={busy || !validPercent} onClick={() => void send("discount")}>
+                <Send className="h-5 w-5" aria-hidden="true" />{t(busy ? "till.manager.sending" : "till.manager.send")}
+              </Button>
+            )}
+            {error && <p role="alert" className="rounded-xl bg-danger-subtle p-3 text-danger-ink">{error}</p>}
+            <div className="flex flex-wrap justify-between gap-2">
+              <Button variant="ghost" onClick={() => { setMode("choose"); setError(null); }}>
+                <ArrowLeft className="h-5 w-5" aria-hidden="true" />{t("till.manager.back")}
+              </Button>
+              <Button variant="subtle" onClick={onClose}>{t("till.manager.close")}</Button>
+            </div>
+          </div>
+        ) : mode === "credit" ? (
+          <div className="mt-3 space-y-3">
+            <p className="text-text-muted">{t("till.manager.creditBody", { name: customerName ?? "", over: money(creditOver) })}</p>
+            <p className="tabular font-bold">{t("till.manager.saleTotal")}: {money(total)}</p>
+            {noteField}
+            {offline ? (
+              <p className="rounded-xl bg-warning-subtle p-3 text-warning-ink">{t("till.manager.offline")}</p>
+            ) : (
+              <Button till className="w-full" disabled={busy} onClick={() => void send("credit")}>
                 <Send className="h-5 w-5" aria-hidden="true" />{t(busy ? "till.manager.sending" : "till.manager.send")}
               </Button>
             )}

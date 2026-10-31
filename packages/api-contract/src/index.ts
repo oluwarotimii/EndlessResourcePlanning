@@ -124,6 +124,8 @@ export const SaleInput = z.object({
   customerId: z.string().optional(),
   /** An approved discount may be applied once. The server checks the approval and recomputes the totals. */
   discountApprovalId: z.string().min(1).optional(),
+  /** An approved credit_over_limit request for this customer and at least this much credit. */
+  creditApprovalId: z.string().min(1).optional(),
   lines: z.array(SaleLine).min(1),
   /** Sum of the lines. */
   subtotal: Naira,
@@ -189,6 +191,7 @@ export const Approval = z.object({
   requestedBy: z.object({ id: z.string(), name: z.string() }),
   requestedAt: z.string(),
   /** The customer the exception is about, when there is one. */
+  customerId: z.string().optional(),
   customerName: z.string().optional(),
   /** Why the request was raised, in the requester's words. */
   requestNote: z.string().optional(),

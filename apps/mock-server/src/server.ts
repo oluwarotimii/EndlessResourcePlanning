@@ -144,11 +144,26 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
       if (input.payments.reduce((n, p) => n + p.amount, 0) !== input.total) return fail(res, 400, "validation", "The payments do not add up to the total.");
       const onCredit = creditOf(input.payments);
       let creditCustomer: Customer | undefined;
+      let creditApproval: Approval | undefined;
       if (onCredit > 0) {
         creditCustomer = customers.find((c) => c.id === input.customerId);
         if (!input.customerId || !creditCustomer) return fail(res, 400, "validation", "A credit sale needs a customer.");
         if (creditCustomer.creditLimit === undefined) return fail(res, 400, "validation", `${creditCustomer.name} has no credit terms.`);
-        if ((creditCustomer.balance ?? 0) + onCredit > creditCustomer.creditLimit) return fail(res, 400, "validation", `${creditCustomer.name} would go over the credit limit. A manager must approve.`);
+        const over = (creditCustomer.balance ?? 0) + onCredit > creditCustomer.creditLimit;
+        if (input.creditApprovalId) {
+          const approval = approvals.get(input.creditApprovalId);
+          if (!approval || approval.kind !== "credit_over_limit" || approval.status !== "approved") {
+            return fail(res, 400, "validation", "The credit approval is missing or not approved.");
+          }
+          if (approval.requestedBy.id !== user.id) return fail(res, 400, "validation", "That credit approval belongs to another cashier.");
+          if (approval.customerId !== creditCustomer.id) return fail(res, 400, "validation", "That credit approval is for another customer.");
+          if (onCredit > approval.amount) return fail(res, 400, "validation", "The credit approval does not cover this sale.");
+          const usedBy = approvalUses.get(approval.id);
+          if (usedBy && usedBy !== input.idempotencyKey) return fail(res, 400, "validation", "That credit approval has already been used.");
+          creditApproval = approval;
+        } else if (over) {
+          return fail(res, 400, "validation", `${creditCustomer.name} would go over the credit limit. A manager must approve.`);
+        }
       }
       const shift = shifts.get(input.shiftId);
       if (!shift || shift.userId !== user.id) return fail(res, 400, "validation", "This sale belongs to a shift that was never opened.");
@@ -161,6 +176,7 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
       };
       sales.set(input.idempotencyKey, sale);
       if (input.discountApprovalId) approvalUses.set(input.discountApprovalId, input.idempotencyKey);
+      if (creditApproval) approvalUses.set(creditApproval.id, input.idempotencyKey);
       return send(res, 200, { sale, duplicate: false });
     }
     if (req.method === "POST" && url.pathname === "/api/print-log") {
@@ -201,7 +217,7 @@ export function createMockServer({ latencyMs = 0, vatRate = 0.075, vatMode = "in
         id: `AP-${String(++approvalSeq).padStart(4, "0")}`,
         kind: input.kind, status: "pending", amount: input.amount, limit, unit,
         requestedBy: { id: user.id, name: user.name }, requestedAt: new Date().toISOString(),
-        customerName: customer?.name, requestNote: input.requestNote,
+        customerId: customer?.id, customerName: customer?.name, requestNote: input.requestNote,
       };
       approvals.set(approval.id, approval);
       approvalCreates.set(input.idempotencyKey, approval.id);
